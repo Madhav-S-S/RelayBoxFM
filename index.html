@@ -4,676 +4,546 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>RelayBox FM</title>
-    
-    <link id="manifest-link" rel="manifest" href="">
     <meta name="theme-color" content="#0f0c29">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-    <!-- Fonts and Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <style>
         :root {
-            --bg-dark: #0f0c29;
-            --bg-mid: #302b63;
-            --bg-light: #24243e;
-            --primary: #ec4899;
-            --primary-glow: rgba(236, 72, 153, 0.4);
-            --text-main: #ffffff;
-            --text-muted: #a099b0;
+            --bg-dark: #0f0c29; --bg-mid: #302b63; --bg-light: #24243e;
+            --accent: #ff007f; /* YouTube Music Pink */
+            --accent-glow: rgba(255, 0, 127, 0.4);
+            --text-main: #ffffff; --text-muted: #a099b0;
             --glass: rgba(255, 255, 255, 0.05);
             --glass-border: rgba(255, 255, 255, 0.1);
-            --nav-height: 75px;
-            --mini-player-height: 70px;
+            --nav-height: 65px;
+            --mini-height: 60px;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
 
         body {
             font-family: 'Outfit', sans-serif;
             background: linear-gradient(135deg, var(--bg-dark), var(--bg-mid), var(--bg-light));
-            background-attachment: fixed;
-            color: var(--text-main);
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            user-select: none;
+            background-attachment: fixed; color: var(--text-main);
+            height: 100vh; overflow: hidden; display: flex; flex-direction: column;
         }
 
         /* Header */
-        header {
-            padding: 20px;
-            text-align: center;
-            background: rgba(15, 12, 41, 0.6);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            z-index: 30;
-            border-bottom: 1px solid var(--glass-border);
-            flex-shrink: 0;
-        }
-        .logo { font-size: 1.4rem; font-weight: 800; letter-spacing: 0.5px; }
-        .logo span { color: var(--primary); }
-        .author { font-size: 10px; font-weight: 300; opacity: 0.7; vertical-align: text-top; margin-left: 4px; }
+        header { padding: 15px; text-align: center; background: rgba(15, 12, 41, 0.8); backdrop-filter: blur(10px); z-index: 10; }
+        .logo { font-size: 1.4rem; font-weight: 800; letter-spacing: 1px; }
+        .author { font-size: 11px; font-weight: 300; opacity: 0.7; color: var(--accent); }
 
-        /* Tabs */
-        .tab-content {
-            flex: 1; position: relative; overflow-y: auto; overflow-x: hidden;
-            padding-bottom: calc(var(--nav-height) + var(--mini-player-height) + 20px);
-        }
-        .tab-pane {
-            position: absolute; top: 0; left: 0; width: 100%; min-height: 100%;
-            opacity: 0; pointer-events: none; padding: 20px;
-            transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            transform: scale(0.95) translateY(10px);
-        }
-        .tab-pane.active { opacity: 1; pointer-events: auto; transform: scale(1) translateY(0); }
+        /* Main Views (Explore & Stars) */
+        .views-container { flex: 1; position: relative; overflow-y: auto; overflow-x: hidden; padding-bottom: calc(var(--nav-height) + var(--mini-height) + 20px); }
+        .view-pane { position: absolute; top: 0; left: 0; width: 100%; min-height: 100%; opacity: 0; pointer-events: none; padding: 15px; transition: opacity 0.3s; }
+        .view-pane.active { opacity: 1; pointer-events: auto; }
 
-        /* Music Player Tab */
-        .player-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; text-align: center; }
+        .search-bar {
+            width: 100%; padding: 15px 20px; border-radius: 25px; background: rgba(0,0,0,0.3);
+            border: 1px solid var(--glass-border); color: white; font-family: 'Outfit'; margin-bottom: 20px; font-size: 1rem;
+        }
+        .search-bar:focus { outline: none; border-color: var(--accent); }
+        
+        .station-list { display: flex; flex-direction: column; gap: 10px; }
+        .station-card {
+            display: flex; align-items: center; padding: 12px; background: var(--glass); border-radius: 15px;
+            border: 1px solid var(--glass-border); transition: background 0.2s;
+        }
+        .station-card:active { background: rgba(255,255,255,0.1); }
+        .st-img { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; object-fit: cover; }
+        .st-info { flex: 1; overflow: hidden; }
+        .st-name { font-weight: 600; font-size: 1.05rem; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+        .st-tags { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+        .btn-star { background: none; border: none; color: var(--text-muted); font-size: 1.3rem; padding: 10px; }
+        .btn-star.active { color: #ffeb3b; text-shadow: 0 0 10px rgba(255,235,59,0.5); }
+
+        /* YouTube Music Style Mini Player */
+        .mini-player {
+            position: fixed; bottom: var(--nav-height); left: 0; width: 100%; height: var(--mini-height);
+            background: #212121; /* YT Music Dark */
+            display: flex; align-items: center; padding: 0 15px;
+            transform: translateY(150%); transition: transform 0.4s cubic-bezier(0.3, 1, 0.3, 1);
+            z-index: 40; cursor: pointer; border-bottom: 1px solid #333;
+        }
+        .mini-player.visible { transform: translateY(0); }
+        .mini-img { width: 40px; height: 40px; border-radius: 4px; margin-right: 15px; object-fit: cover; }
+        .mini-info { flex: 1; overflow: hidden; }
+        .mini-title { font-weight: 600; font-size: 0.95rem; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+        .mini-sub { font-size: 0.8rem; color: var(--text-muted); }
+        .btn-mini-play { background: none; border: none; color: white; font-size: 1.4rem; padding: 10px; }
+        
+        /* Thin Snackbar for Mini Player */
+        .mini-progress-bg { position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: rgba(255,255,255,0.1); }
+        .mini-progress-grey { position: absolute; top: 0; left: 0; height: 100%; background: #888; width: 0%; transition: width 0.3s; }
+        .mini-progress-pink { position: absolute; top: 0; left: 0; height: 100%; background: var(--accent); width: 0%; transition: width 0.1s; }
+
+        /* Maximized Full Screen Player */
+        .max-player {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 12, 41, 0.98); backdrop-filter: blur(25px);
+            z-index: 50; display: flex; flex-direction: column;
+            transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.3, 1, 0.3, 1);
+        }
+        .max-player.open { transform: translateY(0); }
+        
+        .max-header { padding: 20px; display: flex; align-items: center; justify-content: space-between; }
+        .btn-down { background: none; border: none; color: white; font-size: 1.5rem; padding: 10px; }
+        .max-header-title { font-size: 0.9rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+        .max-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         
         .artwork-container {
-            width: 250px; height: 250px; border-radius: 50%;
-            background: var(--glass); border: 3px solid var(--glass-border);
-            margin-bottom: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,0,0,0.5);
+            width: 280px; height: 280px; border-radius: 50%; background: var(--glass);
+            border: 2px solid var(--glass-border); margin-bottom: 40px; box-shadow: 0 10px 40px rgba(0,0,0,0.6);
             overflow: hidden; display: flex; justify-content: center; align-items: center;
-            position: relative; transition: transform 0.3s ease;
         }
         .artwork-container img { width: 100%; height: 100%; object-fit: cover; }
-        .artwork-container::after {
-            content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 15%; height: 15%; background: var(--bg-dark); border-radius: 50%;
-            border: 2px solid var(--glass-border); z-index: 10;
-        }
-        .spin { animation: spin 8s linear infinite; }
+        .spin { animation: spin 10s linear infinite; }
         .spin.paused { animation-play-state: paused; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* Progress Snackbar */
-        .progress-snackbar {
-            width: 250px; height: 6px; background: rgba(255,255,255,0.1);
-            border-radius: 4px; margin: 0 auto 30px auto;
-            position: relative; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
-        }
-        .progress-buffer {
-            position: absolute; top: 0; left: 0; height: 100%; width: 0%;
-            background: #9ca3af; transition: width 0.3s linear;
-        }
-        .progress-play {
-            position: absolute; top: 0; left: 0; height: 100%; width: 0%;
-            background: var(--primary); transition: width 0.1s linear;
-            box-shadow: 0 0 10px var(--primary-glow);
-        }
+        .max-title { font-size: 1.8rem; font-weight: 800; margin-bottom: 5px; text-align: center; line-height: 1.2; }
+        .max-sub { font-size: 1rem; color: var(--text-muted); margin-bottom: 30px; }
 
-        .station-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 5px; padding: 0 15px; line-height: 1.2; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-        .now-playing-text { font-size: 0.9rem; color: var(--primary); min-height: 20px; margin-bottom: 30px; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }
+        /* Thick Snackbar for Max Player */
+        .progress-container { width: 85%; max-width: 400px; margin-bottom: 40px; }
+        .progress-bar-bg { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; position: relative; overflow: hidden; }
+        .progress-bar-grey { position: absolute; top: 0; left: 0; height: 100%; background: #888; width: 0%; border-radius: 3px; transition: width 0.3s; }
+        .progress-bar-pink { position: absolute; top: 0; left: 0; height: 100%; background: var(--accent); width: 0%; border-radius: 3px; transition: width 0.1s; }
+        .progress-labels { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-top: 8px; font-variant-numeric: tabular-nums; }
 
-        .btn-buffer {
-            background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
-            color: white; padding: 12px 25px; border-radius: 30px;
-            font-family: 'Outfit'; font-size: 0.9rem; font-weight: 600;
-            cursor: pointer; transition: all 0.3s; margin-bottom: 30px;
-            display: flex; align-items: center; gap: 10px; backdrop-filter: blur(10px);
+        .max-controls { display: flex; align-items: center; gap: 40px; margin-bottom: 30px; }
+        .btn-play-large {
+            width: 80px; height: 80px; border-radius: 50%; background: var(--accent); color: white;
+            border: none; font-size: 2rem; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 4px 25px var(--accent-glow); transition: transform 0.2s;
         }
-        .btn-buffer:active { transform: scale(0.95); }
-        .btn-buffer.active { background: var(--primary); border-color: var(--primary); color: white; box-shadow: 0 0 20px var(--primary-glow); }
+        .btn-play-large:active { transform: scale(0.9); }
 
-        .controls { display: flex; align-items: center; justify-content: center; gap: 40px; margin-bottom: 30px; width: 100%; }
-        .btn-main {
-            width: 80px; height: 80px; border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary), #8b5cf6); color: white;
-            border: 2px solid rgba(255,255,255,0.2); font-size: 2rem;
-            display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 10px 30px var(--primary-glow);
-            cursor: pointer; transition: transform 0.2s;
+        .settings-row { display: flex; gap: 15px; }
+        .setting-btn {
+            background: var(--glass); border: 1px solid var(--glass-border); color: white;
+            padding: 10px 20px; border-radius: 20px; font-family: 'Outfit'; font-size: 0.9rem;
+            display: flex; align-items: center; gap: 8px; transition: background 0.3s;
         }
-        .btn-main:active { transform: scale(0.9); }
-        .btn-side { background: none; border: none; color: var(--text-muted); font-size: 1.8rem; cursor: pointer; transition: color 0.3s, transform 0.2s; }
-        .btn-side:active { transform: scale(0.9); }
-        .btn-side.active { color: #ffd700; text-shadow: 0 0 15px rgba(255,215,0,0.5); }
-
-        .sleep-timer {
-            background: var(--glass); border: 1px solid var(--glass-border);
-            padding: 10px 20px; border-radius: 20px; color: var(--text-muted);
-            display: flex; align-items: center; gap: 10px; font-size: 0.9rem; backdrop-filter: blur(5px);
-        }
-        .sleep-timer select { background: transparent; color: white; border: none; outline: none; font-family: 'Outfit'; font-weight: 600; cursor: pointer; }
-        .sleep-timer select option { background: var(--bg-dark); }
-
-        /* Lists */
-        .search-bar {
-            width: 100%; padding: 15px 25px; border-radius: 30px;
-            background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
-            color: white; font-family: 'Outfit'; margin-bottom: 20px; font-size: 1rem;
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); outline: none; transition: border-color 0.3s;
-        }
-        .search-bar:focus { border-color: var(--primary); }
-        
-        .station-list { display: flex; flex-direction: column; gap: 12px; }
-        .station-card {
-            display: flex; align-items: center; padding: 12px;
-            background: var(--glass); border-radius: 20px;
-            border: 1px solid var(--glass-border); backdrop-filter: blur(10px);
-            transition: background 0.2s, transform 0.2s, border-color 0.2s;
-        }
-        .station-card:active { background: rgba(255,255,255,0.1); transform: scale(0.98); }
-        .station-card.playing { border-color: var(--primary); background: rgba(236, 72, 153, 0.1); }
-        .st-img { width: 55px; height: 55px; border-radius: 15px; margin-right: 15px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); }
-        .st-info { flex: 1; overflow: hidden; cursor: pointer; }
-        .st-name { font-weight: 600; font-size: 1.05rem; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-        .st-tags { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-
-        /* Mini Player */
-        .mini-player {
-            position: fixed; bottom: var(--nav-height); left: 10px; right: 10px;
-            height: var(--mini-player-height); border-radius: 20px;
-            background: rgba(48, 43, 99, 0.95); backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            display: flex; align-items: center; padding: 0 15px;
-            transform: translateY(150%); opacity: 0;
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
-            z-index: 20; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .mini-player.visible { transform: translateY(-10px); opacity: 1; }
-        .mini-img { width: 45px; height: 45px; border-radius: 50%; margin-right: 15px; border: 1px solid rgba(255,255,255,0.2); }
-        .mini-info { flex: 1; overflow: hidden; }
-        .mini-title { font-weight: 600; font-size: 0.95rem; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-        .mini-sub { font-size: 0.75rem; color: var(--primary); font-weight: 600; text-transform: uppercase; }
-        .btn-mini-play { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; padding: 10px; }
+        .setting-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
 
         /* Bottom Nav */
         .bottom-nav {
             position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height);
-            background: rgba(15, 12, 41, 0.85); backdrop-filter: blur(20px);
-            display: flex; justify-content: space-around; align-items: center;
-            border-top: 1px solid var(--glass-border); z-index: 30;
+            background: rgba(10, 5, 20, 0.95); backdrop-filter: blur(20px);
+            display: flex; justify-content: space-around; align-items: center; z-index: 30;
         }
         .nav-item {
-            color: var(--text-muted); font-size: 1.3rem; padding: 10px 20px;
-            cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex; flex-direction: column; align-items: center; gap: 4px; width: 33%;
+            color: var(--text-muted); font-size: 1.3rem; padding: 10px 30px;
+            display: flex; flex-direction: column; align-items: center; gap: 4px; transition: color 0.3s;
         }
-        .nav-item.active { color: var(--primary); transform: translateY(-3px); }
-        .nav-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; transition: opacity 0.3s; }
-        .nav-item.active .nav-label { opacity: 1; }
+        .nav-item.active { color: white; }
+        .nav-label { font-size: 0.7rem; font-weight: 600; }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo">RelayBox <span>FM</span><span class="author">by Madhav</span></div>
+        <div class="logo">RelayBox FM <span class="author">by Madhav</span></div>
     </header>
 
-    <div class="tab-content">
-        <!-- Player Tab -->
-        <div class="tab-pane active" id="tab-music">
-            <div class="player-wrapper">
-                
-                <div class="artwork-container" id="art-container">
-                    <img id="main-artwork" src="https://ui-avatars.com/api/?name=FM&background=24243e&color=fff&size=260" class="spin paused" alt="Artwork">
-                </div>
-                
-                <!-- YouTube Style Buffer Progress Bar -->
-                <div class="progress-snackbar">
-                    <div class="progress-buffer" id="bar-grey"></div>
-                    <div class="progress-play" id="bar-pink"></div>
-                </div>
-                
-                <div class="station-title" id="main-title">Select a Station</div>
-                <div class="now-playing-text" id="main-sub">Ready to tune in</div>
-                
-                <button class="btn-buffer" id="btn-create-buffer" onclick="toggleBufferMode()">
-                    <i class="fas fa-layer-group"></i> Create 30s Buffer
-                </button>
-
-                <div class="controls">
-                    <button class="btn-side" id="btn-star-main" onclick="toggleStarMain()">
-                        <i class="far fa-star"></i>
-                    </button>
-                    <button class="btn-main" id="btn-play-main" onclick="togglePlay()">
-                        <i class="fas fa-play" id="play-icon-main" style="margin-left: 5px;"></i>
-                    </button>
-                    <button class="btn-side" onclick="playRandomStation()">
-                        <i class="fas fa-dice"></i>
-                    </button>
-                </div>
-
-                <div class="sleep-timer">
-                    <i class="fas fa-moon"></i>
-                    <select id="sleep-timer-select">
-                        <option value="0">Sleep Timer Off</option>
-                        <option value="15">15 Minutes</option>
-                        <option value="30">30 Minutes</option>
-                        <option value="45">45 Minutes</option>
-                        <option value="60">1 Hour</option>
-                    </select>
-                </div>
-            </div>
+    <div class="views-container">
+        <!-- Explore Tab -->
+        <div class="view-pane active" id="view-explore">
+            <input type="text" class="search-bar" id="search-input" placeholder="Search Malayalam stations...">
+            <div class="station-list" id="explore-list"></div>
         </div>
 
         <!-- Stars Tab -->
-        <div class="tab-pane" id="tab-stars">
-            <h2 style="margin-bottom: 20px; font-weight: 700; font-size: 1.5rem;">Starred</h2>
+        <div class="view-pane" id="view-stars">
+            <h3 style="margin-bottom: 15px;">Your Favorites</h3>
             <div class="station-list" id="stars-list"></div>
-        </div>
-
-        <!-- Explore Tab -->
-        <div class="tab-pane" id="tab-search">
-            <input type="text" class="search-bar" id="search-input" placeholder="Search Malayalam stations...">
-            <div class="station-list" id="explore-list">
-                <div style="text-align:center; opacity: 0.5; margin-top: 40px;">
-                    <i class="fas fa-satellite-dish fa-2x fa-beat" style="margin-bottom: 10px;"></i>
-                    <p>Syncing Frequencies...</p>
-                </div>
-            </div>
         </div>
     </div>
 
-    <!-- Mini Player -->
-    <div class="mini-player" id="mini-player" onclick="switchTab('music')">
-        <img class="mini-img spin paused" id="mini-artwork" src="" alt="Artwork">
+    <!-- Mini Player (YT Music Style) -->
+    <div class="mini-player" id="mini-player" onclick="togglePlayerMax()">
+        <img class="mini-img" id="mini-img" src="" alt="Art">
         <div class="mini-info">
-            <div class="mini-title" id="mini-title">Not Playing</div>
-            <div class="mini-sub" id="mini-sub">Tap to expand</div>
+            <div class="mini-title" id="mini-title">Station Name</div>
+            <div class="mini-sub" id="mini-sub">Ready</div>
         </div>
-        <button class="btn-mini-play" onclick="event.stopPropagation(); togglePlay();">
-            <i class="fas fa-play" id="play-icon-mini"></i>
+        <button class="btn-mini-play" id="btn-play-mini" onclick="event.stopPropagation(); togglePlay();">
+            <i class="fas fa-play"></i>
         </button>
+        <div class="mini-progress-bg">
+            <div class="mini-progress-grey" id="mini-grey"></div>
+            <div class="mini-progress-pink" id="mini-pink"></div>
+        </div>
     </div>
 
     <!-- Bottom Nav -->
     <div class="bottom-nav">
-        <div class="nav-item active" onclick="switchTab('music')" id="nav-music">
-            <i class="fas fa-music"></i><span class="nav-label">Player</span>
+        <div class="nav-item active" onclick="switchTab('explore')" id="nav-explore">
+            <i class="fas fa-compass"></i><span class="nav-label">Explore</span>
         </div>
         <div class="nav-item" onclick="switchTab('stars')" id="nav-stars">
             <i class="fas fa-star"></i><span class="nav-label">Stars</span>
         </div>
-        <div class="nav-item" onclick="switchTab('search')" id="nav-search">
-            <i class="fas fa-search"></i><span class="nav-label">Explore</span>
+    </div>
+
+    <!-- Maximized Player -->
+    <div class="max-player" id="max-player">
+        <div class="max-header">
+            <button class="btn-down" onclick="togglePlayerMax()"><i class="fas fa-chevron-down"></i></button>
+            <div class="max-header-title">Now Playing from Explore</div>
+            <button class="btn-star" id="btn-star-max"><i class="far fa-star"></i></button>
+        </div>
+
+        <div class="max-content">
+            <div class="artwork-container">
+                <img id="max-artwork" src="" class="spin paused" alt="Art">
+            </div>
+            
+            <div class="max-title" id="max-title">Station Title</div>
+            <div class="max-sub" id="max-sub">Ready to play</div>
+
+            <div class="progress-container">
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-grey" id="max-grey"></div>
+                    <div class="progress-bar-pink" id="max-pink"></div>
+                </div>
+                <div class="progress-labels">
+                    <span id="time-played">0:00</span>
+                    <span id="time-buffered">0:00 Cached</span>
+                </div>
+            </div>
+
+            <div class="max-controls">
+                <button class="btn-play-large" id="btn-play-max" onclick="togglePlay()">
+                    <i class="fas fa-play"></i>
+                </button>
+            </div>
+
+            <div class="settings-row">
+                <button class="setting-btn active" id="btn-toggle-buffer" onclick="toggleBufferMode()">
+                    <i class="fas fa-shield-alt"></i> Buffer ON
+                </button>
+                <select class="setting-btn" id="sleep-timer-select">
+                    <option value="0">Timer OFF</option>
+                    <option value="15">15 Mins</option>
+                    <option value="30">30 Mins</option>
+                </select>
+            </div>
         </div>
     </div>
 
-    <!-- Audio Engines -->
-    <audio id="core-audio" crossorigin="anonymous"></audio>
-    <!-- Hardware CPU Wakelock (Silent Loop) -->
-    <audio id="wakelock-audio" loop src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU5LjI3LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIAD+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+"></audio>
+    <!-- Native Engine Tags -->
+    <audio id="real-audio" crossorigin="anonymous"></audio>
+    <!-- Silent CPU Wake Lock to bypass Doze while downloading buffer -->
+    <audio id="wakelock" loop src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU5LjI3LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIAD+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+"></audio>
 
     <script>
-        /**
-         * 1. INJECT SERVICE WORKER FOR AGGRESSIVE BUFFERING
-         * This intercepts the audio stream, bursts ~500KB into RAM, 
-         * and seamlessly creates an impenetrable playback buffer.
-         */
+        // --- Core Service Worker: The 30s Delay & Background Hoarder ---
+        // This runs in the background. It intercepts the stream, fetches it, and holds it.
         const swCode = `
-            self.addEventListener('install', e => self.skipWaiting());
+            let bufferQueue = [];
+            let fetchActive = false;
+            let accumulatedBytes = 0;
+            let targetBytes = 0;
+            let reader = null;
+            let isBufferMode = true;
+
+            self.addEventListener('install', () => self.skipWaiting());
             self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+
+            self.addEventListener('message', e => {
+                if (e.data.action === 'START_FETCH') {
+                    fetchActive = false; if(reader) reader.cancel();
+                    bufferQueue = []; accumulatedBytes = 0;
+                    isBufferMode = e.data.useBuffer;
+                    // ~30 seconds of audio at standard 128kbps is ~480KB. 
+                    targetBytes = isBufferMode ? 480000 : 0; 
+                    startBackgroundFetch(e.data.url);
+                }
+            });
+
+            async function startBackgroundFetch(url) {
+                fetchActive = true;
+                try {
+                    const res = await fetch(url);
+                    reader = res.body.getReader();
+                    while(fetchActive) {
+                        // Cap memory hoard at 20MB (~20 mins of paused hoarding)
+                        if (accumulatedBytes > 20000000) { await new Promise(r => setTimeout(r, 1000)); continue; }
+
+                        const { done, value } = await reader.read();
+                        if(done) break;
+                        
+                        bufferQueue.push(value);
+                        accumulatedBytes += value.length;
+                        
+                        // Notify UI of buffer growth
+                        self.clients.matchAll().then(clients => {
+                            clients.forEach(c => c.postMessage({
+                                action: 'PROGRESS',
+                                bytes: accumulatedBytes,
+                                ready: accumulatedBytes >= targetBytes
+                            }));
+                        });
+                    }
+                } catch(e) {}
+            }
 
             self.addEventListener('fetch', event => {
                 const url = new URL(event.request.url);
-                if (url.pathname === '/relaybox-stream') {
-                    const targetUrl = url.searchParams.get('url');
-                    if (targetUrl) {
-                        event.respondWith(handleStream(targetUrl));
-                    }
-                }
-            });
-
-            async function handleStream(targetUrl) {
-                try {
-                    const response = await fetch(targetUrl);
-                    const reader = response.body.getReader();
-                    const buffer = [];
-                    let bytesLoaded = 0;
-                    const targetBytes = 500000; // Force ~500KB cache (approx 30s)
-
-                    // Aggressive Pre-fetch Phase
-                    while (bytesLoaded < targetBytes) {
-                        const {done, value} = await reader.read();
-                        if (done) break;
-                        buffer.push(value);
-                        bytesLoaded += value.length;
-                    }
-
-                    // Seamless Hand-off Phase
-                    const stream = new ReadableStream({
+                if (url.pathname === '/play-buffer') {
+                    event.respondWith(new Response(new ReadableStream({
                         async start(controller) {
-                            for (const chunk of buffer) {
-                                controller.enqueue(chunk);
+                            async function pump() {
+                                if (!fetchActive && bufferQueue.length === 0) { controller.close(); return; }
+                                
+                                // HARD WAIT: Do not feed audio to player until 30s target is reached!
+                                if (isBufferMode && accumulatedBytes < targetBytes) {
+                                    setTimeout(pump, 200); return;
+                                }
+
+                                if (bufferQueue.length > 0) {
+                                    controller.enqueue(bufferQueue.shift());
+                                    pump(); // feed natively as fast as Android demands
+                                } else {
+                                    setTimeout(pump, 50);
+                                }
                             }
-                            while (true) {
-                                const {done, value} = await reader.read();
-                                if (done) break;
-                                controller.enqueue(value);
-                            }
-                            controller.close();
+                            pump();
                         }
-                    });
-
-                    return new Response(stream, {
-                        headers: { 'Content-Type': response.headers.get('Content-Type') || 'audio/mpeg' }
-                    });
-                } catch (e) {
-                    return fetch(targetUrl); // Fallback
+                    }), { headers: { 'Content-Type': 'audio/mpeg' } }));
                 }
-            }
-        `;
-        
-        const swBlob = new Blob([swCode], {type: 'application/javascript'});
-        const swUrl = URL.createObjectURL(swBlob);
-        
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register(swUrl).catch(err => console.warn("SW Registration requires HTTPS:", err));
-        }
-
-        /**
-         * 2. CORE APPLICATION LOGIC
-         */
-        let stations = [];
-        let favorites = JSON.parse(localStorage.getItem('rb_favorites')) || [];
-        let artCache = JSON.parse(localStorage.getItem('rb_artCache')) || {};
-        
-        let currentStation = null;
-        let isBufferMode = false;
-        let sleepTimerId = null;
-
-        const player = document.getElementById('core-audio');
-        const wakeLock = document.getElementById('wakelock-audio');
-
-        // Setup PWA Manifest
-        const manifest = {
-            name: "RelayBox FM", short_name: "RelayBox", display: "standalone",
-            background_color: "#0f0c29", theme_color: "#0f0c29",
-            icons: [{ src: "https://placehold.co/512x512/ec4899/ffffff?text=RB", sizes: "512x512", type: "image/png" }]
-        };
-        document.getElementById('manifest-link').href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }));
-
-        // Init
-        async function init() {
-            const cached = localStorage.getItem('rb_stations');
-            if (cached) {
-                stations = JSON.parse(cached);
-                renderLists(stations);
-            }
-            try {
-                const res = await fetch("https://de1.api.radio-browser.info/json/stations/search?language=malayalam&hidebroken=true&order=clickcount&reverse=true&limit=300");
-                const data = await res.json();
-                if(data.length > 0) {
-                    stations = data;
-                    localStorage.setItem('rb_stations', JSON.stringify(stations));
-                    renderLists(stations);
-                }
-            } catch (err) {}
-        }
-
-        // Smart Artwork Fetcher (iTunes)
-        async function getArtwork(station) {
-            if (artCache[station.stationuuid]) return artCache[station.stationuuid];
-            if (station.favicon && station.favicon.startsWith('http')) return station.favicon;
-            
-            try {
-                const cleanName = station.name.replace(/radio|fm|online|live/gi, '').trim();
-                const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(cleanName)}&entity=podcast,album&limit=1`);
-                const data = await res.json();
-                if (data.results && data.results.length > 0) {
-                    const hqImage = data.results[0].artworkUrl100.replace('100x100', '600x600');
-                    artCache[station.stationuuid] = hqImage;
-                    localStorage.setItem('rb_artCache', JSON.stringify(artCache));
-                    return hqImage;
-                }
-            } catch(e) {}
-            
-            return `https://ui-avatars.com/api/?name=${encodeURIComponent(station.name.substring(0,2))}&background=24243e&color=fff&size=260`;
-        }
-
-        // Rendering
-        async function renderLists(data) {
-            const expList = document.getElementById('explore-list');
-            const starList = document.getElementById('stars-list');
-            expList.innerHTML = ''; starList.innerHTML = '';
-            
-            const favData = stations.filter(s => favorites.includes(s.stationuuid));
-            if(favData.length === 0) starList.innerHTML = '<div style="text-align:center; opacity:0.5; padding: 20px;"><i class="far fa-star fa-2x mb-2"></i><br>No favorites yet</div>';
-
-            for (const st of data) expList.appendChild(await buildCard(st));
-            for (const st of favData) starList.appendChild(await buildCard(st));
-        }
-
-        async function buildCard(station) {
-            const isFav = favorites.includes(station.stationuuid);
-            const isPlaying = currentStation && currentStation.stationuuid === station.stationuuid;
-            const card = document.createElement('div');
-            card.className = `station-card ${isPlaying ? 'playing' : ''}`;
-            card.id = `card-${station.stationuuid}`;
-            
-            const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(station.name.substring(0,2))}&background=24243e&color=fff`;
-            
-            card.innerHTML = `
-                <img src="${fallbackImg}" class="st-img" id="img-${station.stationuuid}">
-                <div class="st-info" onclick='playStation("${station.stationuuid}")'>
-                    <div class="st-name">${station.name}</div>
-                    <div class="st-tags">${station.tags.split(',').slice(0,2).join(' • ')}</div>
-                </div>
-                <button class="btn-side ${isFav ? 'active' : ''}" onclick='toggleStar("${station.stationuuid}", this)' style="font-size: 1.4rem; padding: 10px;">
-                    <i class="${isFav ? 'fas' : 'far'} fa-star"></i>
-                </button>
-            `;
-            
-            getArtwork(station).then(src => {
-                const img = document.getElementById(`img-${station.stationuuid}`);
-                if (img) img.src = src;
             });
-            
-            return card;
-        }
+        `;
+        const blob = new Blob([swCode], {type: 'application/javascript'});
+        navigator.serviceWorker.register(URL.createObjectURL(blob));
 
-        // Playback Logic
-        function toggleBufferMode() {
-            if (!currentStation) return;
-            isBufferMode = !isBufferMode;
-            
-            const btn = document.getElementById('btn-create-buffer');
-            if (isBufferMode) {
-                btn.classList.add('active');
-                btn.innerHTML = '<i class="fas fa-check-circle"></i> 30s Buffer Active';
-            } else {
-                btn.classList.remove('active');
-                btn.innerHTML = '<i class="fas fa-layer-group"></i> Create 30s Buffer';
+        // --- Application State ---
+        let stations = [], favorites = JSON.parse(localStorage.getItem('favs')) || [];
+        let currentStation = null;
+        let useAggressiveBuffer = true;
+        let downloadedSeconds = 0;
+        let streamReadyToPlay = false;
+        
+        const audio = document.getElementById('real-audio');
+        const wakelock = document.getElementById('wakelock');
+
+        // --- Handle Service Worker Progress ---
+        navigator.serviceWorker.addEventListener('message', e => {
+            if (e.data.action === 'PROGRESS') {
+                // Convert bytes to approximate seconds (128kbps = 16KB/s)
+                downloadedSeconds = Math.floor(e.data.bytes / 16000);
+                
+                if (useAggressiveBuffer && !streamReadyToPlay) {
+                    if (e.data.ready) {
+                        streamReadyToPlay = true;
+                        updateStatus("Playing from Buffer");
+                        audio.src = '/play-buffer?t=' + Date.now(); 
+                        audio.play();
+                    } else {
+                        // Countdown 0 to 30s
+                        updateStatus(`Buffering... ${downloadedSeconds}s / 30s`);
+                    }
+                }
+                updateProgressBars();
             }
+        });
+
+        // --- UI Math: The Grey/Pink Snackbars ---
+        function updateProgressBars() {
+            if (!currentStation) return;
+            const playedSecs = audio.currentTime || 0;
             
-            // Reload stream with new setting
-            playStation(currentStation.stationuuid);
+            // Format labels
+            document.getElementById('time-played').textContent = formatTime(playedSecs);
+            document.getElementById('time-buffered').textContent = formatTime(downloadedSeconds) + " Cached";
+
+            // The Grey bar represents the total cache pool (always 100% wide for aesthetics, or capping).
+            // The Pink bar is the % of the cache we have consumed.
+            // If downloaded 60s and played 15s, Pink is at 25%.
+            // If you pause, downloadedSecs grows, so Pink visually shrinks backwards (meaning more buffer ahead!).
+            let pinkPercent = downloadedSeconds > 0 ? (playedSecs / downloadedSeconds) * 100 : 0;
+            if (pinkPercent > 100) pinkPercent = 100;
+
+            document.getElementById('max-grey').style.width = '100%';
+            document.getElementById('mini-grey').style.width = '100%';
+            document.getElementById('max-pink').style.width = `${pinkPercent}%`;
+            document.getElementById('mini-pink').style.width = `${pinkPercent}%`;
         }
 
-        async function playStation(uuid) {
+        setInterval(updateProgressBars, 1000); // Live tick
+
+        function formatTime(s) {
+            const m = Math.floor(s / 60);
+            const r = Math.floor(s % 60);
+            return `${m}:${r < 10 ? '0' : ''}${r}`;
+        }
+
+        // --- Playback Logic ---
+        function playStation(uuid) {
             currentStation = stations.find(s => s.stationuuid === uuid);
             if(!currentStation) return;
 
-            // Update Active Card Styling
-            document.querySelectorAll('.station-card').forEach(c => c.classList.remove('playing'));
-            const cards = document.querySelectorAll(`#card-${uuid}`);
-            cards.forEach(c => c.classList.add('playing'));
-
-            const art = await getArtwork(currentStation);
-            document.getElementById('main-artwork').src = art;
-            document.getElementById('mini-artwork').src = art;
-            document.getElementById('main-title').textContent = currentStation.name;
+            // UI Setup
+            const art = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentStation.name.substring(0,2))}&background=24243e&color=ff007f&size=300`;
+            document.getElementById('mini-img').src = art;
+            document.getElementById('max-artwork').src = art;
             document.getElementById('mini-title').textContent = currentStation.name;
-            
-            updateMainStarButton();
+            document.getElementById('max-title').textContent = currentStation.name;
+            document.getElementById('mini-player').classList.add('visible');
+            updateStarBtn();
 
-            if (isBufferMode && navigator.serviceWorker.controller) {
-                updateSub("Caching 30s Segment...");
-                player.src = `/relaybox-stream?url=${encodeURIComponent(currentStation.url_resolved)}`;
+            audio.pause();
+            downloadedSeconds = 0;
+            streamReadyToPlay = !useAggressiveBuffer;
+
+            // Force CPU Awake immediately so Doze doesn't block the 30s wait
+            wakelock.play().catch(()=>{}); 
+
+            if (useAggressiveBuffer) {
+                updateStatus("Connecting...");
+                navigator.serviceWorker.controller.postMessage({
+                    action: 'START_FETCH', url: currentStation.url_resolved, useBuffer: true
+                });
             } else {
-                updateSub("Connecting...");
-                player.src = currentStation.url_resolved;
+                updateStatus("Live Stream");
+                navigator.serviceWorker.controller.postMessage({
+                    action: 'START_FETCH', url: currentStation.url_resolved, useBuffer: false
+                });
+                audio.src = '/play-buffer?t=' + Date.now();
+                audio.play();
             }
 
-            player.play();
-            wakeLock.play().catch(()=>{}); // Hardware CPU Lock
-
             if ('mediaSession' in navigator) {
-                navigator.mediaSession.metadata = new MediaMetadata({
-                    title: currentStation.name,
-                    artist: 'RelayBox FM',
-                    artwork: [{ src: art, sizes: '512x512', type: 'image/png' }]
-                });
+                navigator.mediaSession.metadata = new MediaMetadata({ title: currentStation.name, artist: 'RelayBox FM' });
                 navigator.mediaSession.setActionHandler('play', togglePlay);
                 navigator.mediaSession.setActionHandler('pause', togglePlay);
             }
         }
 
-        function playRandomStation() {
-            if(stations.length === 0) return;
-            const random = stations[Math.floor(Math.random() * stations.length)];
-            playStation(random.stationuuid);
-        }
-
         function togglePlay() {
-            if (!currentStation) { switchTab('search'); return; }
-            if (player.paused) {
-                player.play();
-                wakeLock.play().catch(()=>{});
+            if(!currentStation) return;
+            if (audio.paused) {
+                if (streamReadyToPlay) audio.play();
+                wakelock.play();
             } else {
-                player.pause();
-                wakeLock.pause();
+                // If paused, audio stops, but SW continues fetching in background!
+                audio.pause();
+                updateStatus("Paused (Hoarding Buffer...)");
             }
         }
 
-        function updateSub(text) {
-            document.getElementById('main-sub').textContent = text;
+        audio.addEventListener('playing', () => {
+            document.getElementById('btn-play-mini').innerHTML = '<i class="fas fa-pause"></i>';
+            document.getElementById('btn-play-max').innerHTML = '<i class="fas fa-pause"></i>';
+            document.querySelector('.spin').classList.remove('paused');
+            updateStatus(useAggressiveBuffer ? "Playing from Buffer" : "Playing Live");
+        });
+
+        audio.addEventListener('pause', () => {
+            document.getElementById('btn-play-mini').innerHTML = '<i class="fas fa-play"></i>';
+            document.getElementById('btn-play-max').innerHTML = '<i class="fas fa-play"></i>';
+            document.querySelector('.spin').classList.add('paused');
+        });
+
+        function updateStatus(text) {
             document.getElementById('mini-sub').textContent = text;
+            document.getElementById('max-sub').textContent = text;
         }
 
-        // Live Buffer Progress Bar Sync
-        player.addEventListener('timeupdate', () => {
-            const barGrey = document.getElementById('bar-grey');
-            const barPink = document.getElementById('bar-pink');
-            
-            if (player.buffered.length > 0) {
-                const bufferedEnd = player.buffered.end(player.buffered.length - 1);
-                const current = player.currentTime;
+        // --- Interactions & UI ---
+        function togglePlayerMax() {
+            document.getElementById('max-player').classList.toggle('open');
+        }
 
-                // Grey bar represents total downloaded buffer (Always 100% of visible window)
-                // Pink bar represents current playback position relative to that buffer.
-                // If bufferedEnd is far ahead, Pink bar is lagging behind (showing the safety net).
-                barGrey.style.width = '100%';
-                
-                let pinkPercent = (current / bufferedEnd) * 100;
-                // Cap it just in case
-                if(pinkPercent > 100) pinkPercent = 100;
-                
-                barPink.style.width = `${pinkPercent}%`;
+        function switchTab(tab) {
+            document.querySelectorAll('.view-pane, .nav-item').forEach(e => e.classList.remove('active'));
+            document.getElementById(`view-${tab}`).classList.add('active');
+            document.getElementById(`nav-${tab}`).classList.add('active');
+        }
+
+        function toggleBufferMode() {
+            useAggressiveBuffer = !useAggressiveBuffer;
+            const btn = document.getElementById('btn-toggle-buffer');
+            if (useAggressiveBuffer) {
+                btn.classList.add('active'); btn.innerHTML = '<i class="fas fa-shield-alt"></i> Buffer ON';
             } else {
-                barGrey.style.width = '0%';
-                barPink.style.width = '0%';
+                btn.classList.remove('active'); btn.innerHTML = '<i class="fas fa-stream"></i> Buffer OFF';
             }
-        });
+            if (currentStation) playStation(currentStation.stationuuid); // restart to apply
+        }
 
-        player.addEventListener('playing', () => {
-            document.getElementById('play-icon-main').className = 'fas fa-pause';
-            document.getElementById('play-icon-mini').className = 'fas fa-pause';
-            document.getElementById('play-icon-main').style.marginLeft = '0';
-            document.querySelectorAll('.spin').forEach(el => el.classList.remove('paused'));
-            document.getElementById('art-container').style.transform = 'scale(1.05)';
-            
-            if(!isBufferMode) updateSub("Live Broadcast");
-            else updateSub("Buffered Playback");
-        });
+        // --- Data & Rendering ---
+        async function fetchStations() {
+            const list = document.getElementById('explore-list');
+            try {
+                const res = await fetch("https://de1.api.radio-browser.info/json/stations/search?language=malayalam&hidebroken=true&order=clickcount&reverse=true&limit=150");
+                stations = await res.json();
+                renderCards(stations, list);
+                renderStars();
+            } catch(e) { list.innerHTML = "<p>Failed to load stations.</p>"; }
+        }
 
-        player.addEventListener('pause', () => {
-            document.getElementById('play-icon-main').className = 'fas fa-play';
-            document.getElementById('play-icon-mini').className = 'fas fa-play';
-            document.getElementById('play-icon-main').style.marginLeft = '5px';
-            document.querySelectorAll('.spin').forEach(el => el.classList.add('paused'));
-            document.getElementById('art-container').style.transform = 'scale(1)';
-            updateSub("Paused");
-        });
+        function renderCards(data, container) {
+            container.innerHTML = '';
+            data.forEach(st => {
+                const isFav = favorites.includes(st.stationuuid);
+                const art = `https://ui-avatars.com/api/?name=${encodeURIComponent(st.name.substring(0,2))}&background=24243e&color=fff`;
+                const card = document.createElement('div');
+                card.className = 'station-card';
+                card.innerHTML = `
+                    <img src="${art}" class="st-img">
+                    <div class="st-info" onclick='playStation("${st.stationuuid}")'>
+                        <div class="st-name">${st.name}</div>
+                        <div class="st-tags">${st.tags.split(',').slice(0,2).join(' • ')}</div>
+                    </div>
+                    <button class="btn-star ${isFav ? 'active' : ''}" onclick='toggleFav("${st.stationuuid}", this)'><i class="fas fa-star"></i></button>
+                `;
+                container.appendChild(card);
+            });
+        }
 
-        // Stars & Search
-        function toggleStar(uuid, btn) {
+        function toggleFav(uuid, btn) {
             if (favorites.includes(uuid)) {
                 favorites = favorites.filter(id => id !== uuid);
-                if(btn) { btn.classList.remove('active'); btn.innerHTML = '<i class="far fa-star"></i>'; }
+                if(btn) btn.classList.remove('active');
             } else {
                 favorites.push(uuid);
-                if(btn) { 
-                    btn.classList.add('active'); btn.innerHTML = '<i class="fas fa-star"></i>'; 
-                    btn.style.transform = 'scale(1.3)'; setTimeout(() => btn.style.transform = 'scale(1)', 200);
-                }
+                if(btn) btn.classList.add('active');
             }
-            localStorage.setItem('rb_favorites', JSON.stringify(favorites));
-            if(currentStation && currentStation.stationuuid === uuid) updateMainStarButton();
-            
-            // Re-render stars list silently
-            const starList = document.getElementById('stars-list');
-            starList.innerHTML = '';
+            localStorage.setItem('favs', JSON.stringify(favorites));
+            renderStars();
+            updateStarBtn();
+        }
+
+        function renderStars() {
+            const container = document.getElementById('stars-list');
             const favData = stations.filter(s => favorites.includes(s.stationuuid));
-            if(favData.length === 0) starList.innerHTML = '<div style="text-align:center; opacity:0.5; padding: 20px;"><i class="far fa-star fa-2x mb-2"></i><br>No favorites yet</div>';
-            favData.forEach(async st => starList.appendChild(await buildCard(st)));
+            if(favData.length===0) container.innerHTML = '<p style="color:var(--text-muted);">No favorites yet.</p>';
+            else renderCards(favData, container);
         }
 
-        function toggleStarMain() {
-            if(currentStation) toggleStar(currentStation.stationuuid, null);
-        }
-
-        function updateMainStarButton() {
-            const btn = document.getElementById('btn-star-main');
+        function updateStarBtn() {
+            const btn = document.getElementById('btn-star-max');
             if(!currentStation) return;
-            if(favorites.includes(currentStation.stationuuid)) {
-                btn.classList.add('active');
-                btn.innerHTML = '<i class="fas fa-star"></i>';
-            } else {
-                btn.classList.remove('active');
-                btn.innerHTML = '<i class="far fa-star"></i>';
-            }
+            btn.className = 'btn-star ' + (favorites.includes(currentStation.stationuuid) ? 'active' : '');
+            btn.onclick = () => toggleFav(currentStation.stationuuid, btn);
         }
 
-        document.getElementById('search-input').addEventListener('input', (e) => {
+        document.getElementById('search-input').addEventListener('input', e => {
             const q = e.target.value.toLowerCase();
-            const filtered = stations.filter(s => s.name.toLowerCase().includes(q) || (s.tags && s.tags.toLowerCase().includes(q)));
-            const list = document.getElementById('explore-list');
-            list.innerHTML = '';
-            filtered.forEach(async st => list.appendChild(await buildCard(st)));
+            renderCards(stations.filter(s => s.name.toLowerCase().includes(q)), document.getElementById('explore-list'));
         });
 
-        // Tabs
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            
-            document.getElementById(`tab-${tabId}`).classList.add('active');
-            document.getElementById(`nav-${tabId}`).classList.add('active');
-
-            const miniPlayer = document.getElementById('mini-player');
-            if (tabId === 'music') {
-                miniPlayer.classList.remove('visible');
-            } else {
-                if (currentStation) miniPlayer.classList.add('visible');
-            }
-        }
-
-        // Sleep Timer
-        document.getElementById('sleep-timer-select').addEventListener('change', (e) => {
-            clearTimeout(sleepTimerId);
+        // Sleep timer
+        document.getElementById('sleep-timer-select').addEventListener('change', e => {
             const mins = parseInt(e.target.value);
-            if (mins > 0) {
-                sleepTimerId = setTimeout(() => {
-                    player.pause();
-                    wakeLock.pause();
-                    document.getElementById('sleep-timer-select').value = "0";
-                }, mins * 60000);
-            }
+            if (mins > 0) setTimeout(() => audio.pause(), mins * 60000);
         });
 
-        init();
+        fetchStations();
     </script>
 </body>
 </html>

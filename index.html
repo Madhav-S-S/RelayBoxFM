@@ -1,708 +1,570 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>RelayBox FM</title>
-    
-    <link id="manifest-link" rel="manifest" href="">
-    <meta name="theme-color" content="#0f172a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-    <!-- Fonts and Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#1a0b2e">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Outfit', 'sans-serif'] },
-                    colors: {
-                        primary: '#ec4899',
-                        secondary: '#8b5cf6',
-                    }
-                }
-            }
-        }
-    </script>
     <style>
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
-        
+        :root {
+            --bg-color: #1a0b2e;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent: #ff007f;
+            --text-main: #ffffff;
+            --text-muted: #a099b0;
+            --nav-height: 65px;
+            --mini-player-height: 70px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
         body {
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
             font-family: 'Outfit', sans-serif;
-            overflow: hidden; 
-        }
-
-        /* Animated Gradient Mesh Background */
-        .bg-mesh {
-            background: linear-gradient(-45deg, #0f172a, #312e81, #701a75, #1e1b4b, #111827);
-            background-size: 400% 400%;
-            animation: gradientBG 15s ease infinite;
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1;
-        }
-        @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        
-        .glass-panel {
-            background: rgba(17, 24, 39, 0.6);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-        }
-
-        /* Player Container Transitions */
-        #player-container {
-            position: absolute;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 40;
+            background: linear-gradient(135deg, var(--bg-color), #4b1d52);
+            color: var(--text-main);
+            height: 100vh;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* Full Player State */
-        #player-container.full-player {
-            top: 0; left: 0; right: 0; bottom: 0;
-            border-radius: 0;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(30px);
-            cursor: default;
+        /* Header */
+        header {
+            padding: 20px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            z-index: 10;
         }
+        .logo { font-size: 1.5rem; font-weight: 800; letter-spacing: 1px; }
+        .logo span { font-size: 0.8rem; font-weight: 300; color: var(--accent); vertical-align: middle; margin-left: 5px; }
 
-        /* Mini Player State */
-        #player-container.mini-player {
-            top: auto; bottom: 85px; /* Above Bottom Nav */
-            left: 12px; right: 12px; height: 64px;
-            border-radius: 16px;
-            background: rgba(49, 46, 129, 0.85);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            cursor: pointer;
-        }
-
-        /* Crossfade UI Elements */
-        .full-player #full-player-ui { opacity: 1; pointer-events: auto; transition: opacity 0.4s 0.2s; }
-        .mini-player #full-player-ui { opacity: 0; pointer-events: none; transition: opacity 0.2s; }
-        
-        .mini-player #mini-player-ui { opacity: 1; pointer-events: auto; transition: opacity 0.4s 0.2s; }
-        .full-player #mini-player-ui { opacity: 0; pointer-events: none; transition: opacity 0.2s; }
-
-        /* Vinyl Record Spin */
-        .vinyl {
-            border-radius: 50%;
-            border: 4px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,0,0,0.5);
-            transition: transform 0.3s ease;
+        /* Tab System */
+        .tab-content {
+            flex: 1;
             position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-bottom: calc(var(--nav-height) + var(--mini-player-height) + 20px);
         }
-        .vinyl::after {
-            content: ''; position: absolute;
-            top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 15%; height: 15%;
-            background: #111827; border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.2); z-index: 10;
+        .tab-pane {
+            position: absolute;
+            top: 0; left: 0; width: 100%; min-height: 100%;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: scale(0.98);
+            padding: 20px;
         }
+        .tab-pane.active { opacity: 1; pointer-events: auto; transform: scale(1); }
 
+        /* Main Player Tab */
+        .player-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+        }
+        .artwork-container {
+            width: 250px; height: 250px;
+            border-radius: 50%;
+            background: var(--glass-bg);
+            border: 2px solid var(--glass-border);
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .artwork-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .spin { animation: spin 10s linear infinite; }
+        .spin.paused { animation-play-state: paused; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        .is-playing .vinyl { animation: spin 5s linear infinite; }
-        .is-paused .vinyl { animation: spin 5s linear infinite; animation-play-state: paused; }
 
-        .tab-active { color: #ec4899; transform: scale(1.1); transition: all 0.3s; }
-        .tab-inactive { color: rgba(255,255,255,0.5); transition: all 0.3s; }
+        .station-title { font-size: 1.8rem; font-weight: 600; margin-bottom: 10px; }
+        .now-playing-text { font-size: 1rem; color: var(--text-muted); min-height: 24px; margin-bottom: 30px; }
+
+        .controls { display: flex; align-items: center; gap: 30px; margin-bottom: 40px; }
+        .btn-circle {
+            width: 60px; height: 60px; border-radius: 50%;
+            background: var(--accent); color: white;
+            border: none; font-size: 1.5rem;
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 4px 15px rgba(255,0,127,0.4);
+            cursor: pointer; transition: transform 0.2s;
+        }
+        .btn-circle:active { transform: scale(0.9); }
+        .btn-icon { background: none; border: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer; }
+        .btn-icon.active { color: var(--accent); }
+
+        /* Buffer & Sleep Timer Settings */
+        .settings-card {
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            border-radius: 15px; padding: 20px; width: 100%; max-width: 350px;
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        .setting-row { display: flex; justify-content: space-between; align-items: center; }
+        .toggle-switch {
+            position: relative; display: inline-block; width: 50px; height: 26px;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #333; transition: .4s; border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px;
+            background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(24px); }
+        select {
+            background: rgba(0,0,0,0.5); color: white; border: 1px solid var(--glass-border);
+            padding: 8px; border-radius: 8px; outline: none; font-family: 'Outfit';
+        }
+
+        /* Lists (Explore & Stars) */
+        .search-bar {
+            width: 100%; padding: 15px; border-radius: 25px;
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            color: white; font-family: 'Outfit'; margin-bottom: 20px; font-size: 1rem;
+        }
+        .station-list { display: flex; flex-direction: column; gap: 10px; }
+        .station-card {
+            display: flex; align-items: center; padding: 15px;
+            background: var(--glass-bg); border-radius: 15px;
+            border: 1px solid var(--glass-border);
+            transition: background 0.2s;
+        }
+        .station-card:active { background: rgba(255,255,255,0.1); }
+        .st-img { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; object-fit: cover; }
+        .st-info { flex: 1; overflow: hidden; }
+        .st-name { font-weight: 600; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+        .st-tags { font-size: 0.8rem; color: var(--text-muted); margin-top: 5px; }
+        .st-actions { display: flex; gap: 15px; align-items: center; }
+
+        /* Mini Player */
+        .mini-player {
+            position: fixed; bottom: var(--nav-height); left: 0; width: 100%;
+            height: var(--mini-player-height);
+            background: rgba(10, 5, 20, 0.85); backdrop-filter: blur(15px);
+            border-top: 1px solid var(--glass-border);
+            display: flex; align-items: center; padding: 0 20px;
+            transform: translateY(150%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 20; cursor: pointer;
+        }
+        .mini-player.visible { transform: translateY(0); }
+        .mini-img { width: 45px; height: 45px; border-radius: 50%; margin-right: 15px; }
+        .mini-info { flex: 1; overflow: hidden; }
+        .mini-title { font-weight: 600; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+        .mini-sub { font-size: 0.8rem; color: var(--text-muted); }
+
+        /* Bottom Nav */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height);
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(15px);
+            display: flex; justify-content: space-around; align-items: center;
+            border-top: 1px solid var(--glass-border); z-index: 30;
+        }
+        .nav-item {
+            color: var(--text-muted); font-size: 1.5rem; padding: 10px 20px;
+            cursor: pointer; transition: color 0.3s, transform 0.2s;
+        }
+        .nav-item.active { color: var(--accent); transform: scale(1.1); }
+
+        /* Loader */
+        .loader {
+            display: none; border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid var(--accent); border-radius: 50%;
+            width: 24px; height: 24px; animation: spin 1s linear infinite;
+        }
     </style>
 </head>
-<body class="text-white">
+<body>
 
-    <div class="bg-mesh"></div>
+    <header>
+        <div class="logo">RelayBox FM <span>by Madhav</span></div>
+    </header>
 
-    <div class="h-screen w-full max-w-md mx-auto flex flex-col relative z-10 shadow-2xl bg-black/10">
-        
-        <!-- Header -->
-        <header class="glass-panel flex justify-center items-center p-4 shrink-0 z-20 border-b border-white/5">
-            <h1 class="font-extrabold text-xl tracking-tight">RelayBox <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">FM</span> <span class="text-[10px] font-normal text-gray-400 align-text-bottom ml-1">by Madhav</span></h1>
-        </header>
-
-        <!-- Main Content Area (Lists) -->
-        <main class="flex-1 relative overflow-y-auto no-scrollbar pb-[160px] z-10">
-            <!-- VIEW: FAVORITES -->
-            <div id="view-favorites" class="hidden flex-col">
-                <div class="p-5 border-b border-white/5 shrink-0 bg-black/20 sticky top-0 backdrop-blur-md z-10">
-                    <h2 class="text-xl font-bold"><i class="fa-solid fa-star text-yellow-400 mr-2"></i> Starred Frequencies</h2>
+    <div class="tab-content" id="main-content">
+        <!-- Player Tab -->
+        <div class="tab-pane active" id="tab-music">
+            <div class="player-wrapper">
+                <div class="artwork-container">
+                    <img id="main-artwork" src="https://ui-avatars.com/api/?name=R&background=random&size=250" alt="Artwork" class="spin paused">
                 </div>
-                <div id="favorites-list" class="p-2 flex flex-col gap-1"></div>
-            </div>
-
-            <!-- VIEW: EXPLORE -->
-            <div id="view-explore" class="hidden flex-col">
-                <div class="p-4 border-b border-white/5 shrink-0 bg-black/20 sticky top-0 backdrop-blur-md z-10">
-                    <div class="relative">
-                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-white/50"></i>
-                        <input type="text" id="search-input" onkeyup="app.filterStations()" placeholder="Search Malayalam radios..." class="w-full bg-white/10 border border-white/20 rounded-full py-3 pl-12 pr-4 text-white placeholder-white/50 focus:outline-none focus:border-primary transition-colors">
-                    </div>
-                </div>
-                <div id="explore-list" class="p-2 flex flex-col gap-1">
-                    <div class="flex flex-col items-center justify-center py-20 opacity-70">
-                        <i class="fa-solid fa-satellite-dish text-4xl animate-pulse mb-4 text-primary"></i>
-                        <p class="text-sm tracking-wide">Syncing Frequencies...</p>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <!-- PLAYER CONTAINER (Transitions between Full & Mini) -->
-        <div id="player-container" class="full-player shadow-2xl" onclick="app.handlePlayerClick(event)">
-            
-            <!-- MINI PLAYER UI -->
-            <div id="mini-player-ui" class="absolute inset-0 flex items-center justify-between px-4">
-                <div class="flex items-center gap-3 w-[70%]">
-                    <div id="mini-stage" class="w-10 h-10 shrink-0">
-                        <img id="mini-thumb" src="" class="w-full h-full rounded-full object-cover vinyl bg-black/50">
-                    </div>
-                    <div class="flex flex-col overflow-hidden">
-                        <span id="mini-name" class="font-semibold text-sm truncate">Select Station</span>
-                        <span id="mini-status" class="text-[10px] text-pink-400 uppercase tracking-wider truncate">Ready</span>
-                    </div>
-                </div>
-                <button id="mini-btn-play" class="w-10 h-10 flex items-center justify-center text-white active:scale-90 transition-transform">
-                    <i class="fa-solid fa-play text-xl" id="mini-icon-play"></i>
-                </button>
-            </div>
-
-            <!-- FULL PLAYER UI -->
-            <div id="full-player-ui" class="absolute inset-0 flex flex-col pt-4 pb-8 overflow-y-auto no-scrollbar">
+                <div class="station-title" id="main-title">Select a Station</div>
+                <div class="now-playing-text" id="main-sub">Ready to play</div>
                 
-                <div class="flex justify-between items-center px-6 shrink-0 mb-4">
-                    <button onclick="event.stopPropagation(); app.minimizePlayer()" class="text-gray-400 hover:text-white p-2">
-                        <i class="fa-solid fa-chevron-down text-xl"></i>
+                <div class="controls">
+                    <button class="btn-icon" id="btn-star-main"><i class="far fa-star"></i></button>
+                    <button class="btn-circle" id="btn-play-main">
+                        <i class="fas fa-play" id="play-icon-main"></i>
+                        <div class="loader" id="main-loader"></div>
                     </button>
-                    <!-- Sleep Timer Toggle -->
-                    <button onclick="event.stopPropagation(); app.toggleSleepMenu()" class="text-gray-400 hover:text-white relative p-2">
-                        <i class="fa-solid fa-moon text-xl"></i>
-                        <span id="sleep-badge" class="absolute top-0 right-0 bg-primary text-[9px] px-1 rounded-full hidden"></span>
-                    </button>
+                    <button class="btn-icon" onclick="playRandomStation()"><i class="fas fa-random"></i></button>
                 </div>
 
-                <div class="flex-1 flex flex-col items-center justify-center p-6">
-                    <div class="relative w-64 h-64 mb-10" id="player-stage">
-                        <img id="player-thumb" src="https://placehold.co/400x400/1e1b4b/ffffff?text=FM" alt="Radio" class="w-full h-full object-cover vinyl shadow-2xl bg-black/50">
-                        
-                        <!-- 30s Buffering Overlay -->
-                        <div id="buffer-overlay" class="absolute inset-0 bg-black/80 rounded-full flex flex-col items-center justify-center hidden z-20 backdrop-blur-sm">
-                            <span id="buffer-count" class="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary mb-1 drop-shadow-lg">30</span>
-                            <span class="text-[10px] text-white/90 uppercase tracking-[0.2em]">Caching Stream</span>
-                            <div class="absolute inset-2 border-4 border-transparent border-t-primary border-b-secondary rounded-full animate-spin opacity-50 pointer-events-none"></div>
+                <div class="settings-card">
+                    <div class="setting-row">
+                        <div>
+                            <strong>Aggressive Buffer</strong><br>
+                            <small style="color: var(--text-muted)">Prevents Doze pauses (delayed start)</small>
                         </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-buffer">
+                            <span class="slider"></span>
+                        </label>
                     </div>
-
-                    <div class="text-center w-full mb-8 px-4">
-                        <h2 id="player-name" class="text-3xl font-bold truncate mb-2 drop-shadow-md">No Station</h2>
-                        <p id="player-now-playing" class="text-sm font-medium text-pink-400 tracking-wide uppercase truncate w-full h-5">Live Broadcast</p>
-                    </div>
-
-                    <!-- Manual Buffer Button -->
-                    <button onclick="event.stopPropagation(); app.startManualBuffer()" id="btn-buffer" class="mb-10 px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-sm font-semibold tracking-wide transition-colors flex items-center gap-2">
-                        <i class="fa-solid fa-layer-group"></i> Create 30s Buffer
-                    </button>
-
-                    <!-- Main Controls -->
-                    <div class="flex items-center justify-center gap-10 w-full">
-                        <button onclick="event.stopPropagation(); app.toggleFavorite()" id="btn-fav" class="text-3xl text-gray-400 hover:scale-110 transition-transform">
-                            <i class="fa-regular fa-star" id="icon-fav"></i>
-                        </button>
-
-                        <button onclick="event.stopPropagation(); app.togglePlay()" id="btn-play" class="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-secondary text-white flex items-center justify-center shadow-[0_0_30px_rgba(236,72,153,0.4)] active:scale-95 transition-transform border-2 border-white/20">
-                            <i class="fa-solid fa-play text-4xl ml-2 drop-shadow-md" id="icon-play"></i>
-                        </button>
-
-                        <button onclick="event.stopPropagation(); app.playRandom()" class="text-3xl text-gray-400 hover:text-white hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-dice"></i>
-                        </button>
+                    <div class="setting-row">
+                        <strong>Sleep Timer</strong>
+                        <select id="sleep-timer-select">
+                            <option value="0">Off</option>
+                            <option value="15">15 Mins</option>
+                            <option value="30">30 Mins</option>
+                            <option value="60">1 Hour</option>
+                        </select>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Sleep Timer Menu Overlay -->
-            <div id="sleep-timer-menu" class="absolute top-16 right-6 bg-gray-900/95 border border-white/10 rounded-2xl p-2 hidden flex-col z-50 shadow-2xl backdrop-blur-md w-40 transform transition-all" onclick="event.stopPropagation()">
-                <div class="text-[10px] text-gray-400 uppercase tracking-widest px-3 py-2 border-b border-white/5 mb-1">Sleep Timer</div>
-                <button onclick="app.setSleepTimer(15)" class="text-left px-3 py-2 text-sm hover:bg-white/10 rounded-lg transition-colors">15 Minutes</button>
-                <button onclick="app.setSleepTimer(30)" class="text-left px-3 py-2 text-sm hover:bg-white/10 rounded-lg transition-colors">30 Minutes</button>
-                <button onclick="app.setSleepTimer(45)" class="text-left px-3 py-2 text-sm hover:bg-white/10 rounded-lg transition-colors">45 Minutes</button>
-                <button onclick="app.setSleepTimer(60)" class="text-left px-3 py-2 text-sm hover:bg-white/10 rounded-lg transition-colors">60 Minutes</button>
-                <button onclick="app.setSleepTimer(0)" class="text-left px-3 py-2 text-sm text-pink-400 hover:bg-white/10 rounded-lg transition-colors mt-1 border-t border-white/5">Off</button>
             </div>
         </div>
 
-        <!-- BOTTOM NAV -->
-        <nav class="absolute bottom-0 w-full h-[75px] glass-panel border-t border-white/10 flex justify-around items-center z-30 pb-2">
-            <button onclick="app.switchTab('explore')" id="nav-explore" class="tab-inactive flex flex-col items-center gap-1 w-16">
-                <i class="fa-solid fa-magnifying-glass text-xl"></i>
-                <span class="text-[10px] font-medium tracking-wide">Search</span>
-            </button>
-            <button onclick="app.switchTab('player')" id="nav-player" class="tab-active flex flex-col items-center gap-1 w-16">
-                <i class="fa-solid fa-music text-xl"></i>
-                <span class="text-[10px] font-medium tracking-wide">Music</span>
-            </button>
-            <button onclick="app.switchTab('favorites')" id="nav-favorites" class="tab-inactive flex flex-col items-center gap-1 w-16">
-                <i class="fa-solid fa-star text-xl"></i>
-                <span class="text-[10px] font-medium tracking-wide">Star</span>
-            </button>
-        </nav>
+        <!-- Stars / Favorites Tab -->
+        <div class="tab-pane" id="tab-stars">
+            <h2 style="margin-bottom: 20px;">Your Favorites</h2>
+            <div class="station-list" id="stars-list"></div>
+        </div>
 
+        <!-- Explore / Search Tab -->
+        <div class="tab-pane" id="tab-search">
+            <input type="text" class="search-bar" id="search-input" placeholder="Search Malayalam stations...">
+            <div class="station-list" id="explore-list"></div>
+        </div>
     </div>
 
-    <!-- Hidden Audio Engine -->
-    <audio id="audio-engine" preload="none" crossorigin="anonymous"></audio>
+    <!-- Mini Player -->
+    <div class="mini-player" id="mini-player" onclick="switchTab('music')">
+        <img class="mini-img spin paused" id="mini-artwork" src="https://ui-avatars.com/api/?name=R&background=random" alt="Artwork">
+        <div class="mini-info">
+            <div class="mini-title" id="mini-title">Not Playing</div>
+            <div class="mini-sub" id="mini-sub">Tap to open</div>
+        </div>
+        <button class="btn-icon" id="btn-play-mini" onclick="event.stopPropagation(); togglePlay();">
+            <i class="fas fa-play" id="play-icon-mini"></i>
+        </button>
+    </div>
+
+    <!-- Bottom Nav -->
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('music')" id="nav-music"><i class="fas fa-music"></i></div>
+        <div class="nav-item" onclick="switchTab('stars')" id="nav-stars"><i class="fas fa-star"></i></div>
+        <div class="nav-item" onclick="switchTab('search')" id="nav-search"><i class="fas fa-search"></i></div>
+    </div>
 
     <script>
-        /**
-         * PWA Setup
-         */
-        function setupPWA() {
-            const manifest = {
-                name: "RelayBox FM", short_name: "RelayBox",
-                display: "standalone", background_color: "#0f172a", theme_color: "#0f172a",
-                icons: [{ src: "https://placehold.co/512x512/ec4899/ffffff?text=RB", sizes: "512x512", type: "image/png" }]
-            };
-            document.getElementById('manifest-link').href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }));
-        }
+        // --- Core State ---
+        let stations = [];
+        let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+        let currentStation = null;
+        let isPlaying = false;
+        let isBufferingMode = false;
+        let sleepTimerId = null;
 
-        class RelayBoxApp {
-            constructor() {
-                this.stations = JSON.parse(localStorage.getItem('rb_stations_cache')) || [];
-                this.favorites = JSON.parse(localStorage.getItem('rb_favorites')) || [];
-                this.currentStation = null;
-                
-                this.isPlaying = false;
-                this.isFullPlayer = true;
-                
-                this.isBuffering = false;
-                this.bufferInterval = null;
-                
-                this.sleepTimerInterval = null;
-                this.sleepMins = 0;
+        const audio = new Audio();
+        audio.crossOrigin = "anonymous";
 
-                this.audio = document.getElementById('audio-engine');
-                this.init();
-            }
-
-            async init() {
-                this.setupAudioListeners();
-                
-                if (this.stations.length > 0) {
-                    this.renderExploreList(this.stations);
-                    this.fetchStations(true);
-                } else {
-                    await this.fetchStations(false);
-                }
-
-                this.renderFavoritesList();
-
-                if (this.stations.length > 0) {
-                    this.setStation(this.stations[Math.floor(Math.random() * this.stations.length)], false);
-                }
-            }
-
-            async fetchStations(silent = false) {
-                try {
-                    const res = await fetch('https://de1.api.radio-browser.info/json/stations/search?language=malayalam&hidebroken=true&limit=500&order=clickcount&reverse=true');
-                    const data = await res.json();
-                    this.stations = data.filter(s => s.url_resolved && s.codec !== 'UNKNOWN');
-                    localStorage.setItem('rb_stations_cache', JSON.stringify(this.stations));
-                    if (!silent) this.renderExploreList(this.stations);
-                } catch (error) {
-                    if (!silent && this.stations.length === 0) {
-                        document.getElementById('explore-list').innerHTML = `<div class="text-center text-red-400 py-10">Network Error. Check connection.</div>`;
-                    }
-                }
-            }
-
-            /**
-             * Artwork Engine using iTunes Search API fallback
-             */
-            async handleImageError(imgEl, uuid, name) {
-                if (imgEl.dataset.retried) return;
-                imgEl.dataset.retried = 'true';
-                
-                const cacheKey = 'art_' + uuid;
-                const cached = localStorage.getItem(cacheKey);
-                
-                if (cached) {
-                    imgEl.src = cached;
-                    if(this.currentStation && this.currentStation.stationuuid === uuid) this.syncPlayerArt(cached);
-                    return;
-                }
-
-                try {
-                    // Try iTunes API for Malayalam Album/Podcast Artwork based on station name
-                    const cleanName = name.replace(/radio|fm|online/gi, '').trim();
-                    const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(cleanName)}&media=music&limit=1`);
-                    const data = await res.json();
-                    
-                    if (data.results && data.results.length > 0) {
-                        const art = data.results[0].artworkUrl100.replace('100x100bb', '400x400bb');
-                        localStorage.setItem(cacheKey, art);
-                        imgEl.src = art;
-                        if(this.currentStation && this.currentStation.stationuuid === uuid) this.syncPlayerArt(art);
-                        return;
-                    }
-                } catch (e) {}
-
-                // Ultimate Fallback
-                const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(name.substring(0,2))}&background=random&color=fff&size=256`;
-                localStorage.setItem(cacheKey, fallback);
-                imgEl.src = fallback;
-                if(this.currentStation && this.currentStation.stationuuid === uuid) this.syncPlayerArt(fallback);
-            }
-
-            syncPlayerArt(src) {
-                document.getElementById('player-thumb').src = src;
-                document.getElementById('mini-thumb').src = src;
-            }
-
-            /**
-             * Tab & View Management
-             */
-            switchTab(tabId) {
-                ['explore', 'favorites'].forEach(id => {
-                    document.getElementById(`view-${id}`).classList.add('hidden');
-                    document.getElementById(`nav-${id}`).className = "tab-inactive flex flex-col items-center gap-1 w-16";
-                });
-                document.getElementById('nav-player').className = "tab-inactive flex flex-col items-center gap-1 w-16";
-
-                if (tabId === 'player') {
-                    this.expandPlayer();
-                    document.getElementById('nav-player').className = "tab-active flex flex-col items-center gap-1 w-16";
-                } else {
-                    this.minimizePlayer();
-                    document.getElementById(`view-${tabId}`).classList.remove('hidden');
-                    document.getElementById(`nav-${tabId}`).className = "tab-active flex flex-col items-center gap-1 w-16";
-                }
-            }
-
-            expandPlayer() {
-                if(this.isFullPlayer) return;
-                document.getElementById('player-container').className = "full-player shadow-2xl";
-                this.isFullPlayer = true;
-                document.getElementById('nav-player').className = "tab-active flex flex-col items-center gap-1 w-16";
-                
-                // Dim other tabs
-                ['explore', 'favorites'].forEach(id => {
-                    document.getElementById(`nav-${id}`).className = "tab-inactive flex flex-col items-center gap-1 w-16";
-                });
-            }
-
-            minimizePlayer() {
-                if(!this.isFullPlayer) return;
-                document.getElementById('player-container').className = "mini-player shadow-2xl";
-                this.isFullPlayer = false;
-                document.getElementById('sleep-timer-menu').classList.add('hidden');
-            }
-
-            handlePlayerClick(e) {
-                // If clicked on mini player play button, don't expand
-                if (!this.isFullPlayer) {
-                    if (e.target.closest('#mini-btn-play')) {
-                        this.togglePlay();
-                        return;
-                    }
-                    this.switchTab('player');
-                }
-            }
-
-            /**
-             * List Renderers
-             */
-            createListItem(station) {
-                const initialImg = station.favicon || `https://ui-avatars.com/api/?name=${encodeURIComponent(station.name.substring(0,2))}&background=random&color=fff&size=256`;
-                const safeName = station.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                
-                return `
-                    <div class="flex items-center gap-4 p-3 rounded-2xl hover:bg-white/10 cursor-pointer border border-transparent hover:border-white/5 transition-all" onclick="app.playStationFromList('${station.stationuuid}')">
-                        <img src="${initialImg}" onerror="app.handleImageError(this, '${station.stationuuid}', '${safeName}')" class="w-14 h-14 rounded-xl object-cover shadow-md bg-black/20 shrink-0">
-                        <div class="flex-1 min-w-0">
-                            <h4 class="font-semibold text-white truncate text-[15px]">${station.name}</h4>
-                            <p class="text-[11px] text-white/50 truncate uppercase tracking-wider">Live Broadcast</p>
-                        </div>
-                        <button onclick="event.stopPropagation(); app.toggleFavoriteById('${station.stationuuid}')" class="w-10 h-10 flex items-center justify-center text-xl ${this.isFavorite(station.stationuuid) ? 'text-yellow-400' : 'text-gray-500 hover:text-white'} transition-colors shrink-0">
-                            <i class="${this.isFavorite(station.stationuuid) ? 'fa-solid' : 'fa-regular'} fa-star"></i>
-                        </button>
-                    </div>
-                `;
-            }
-
-            renderExploreList(list) {
-                const container = document.getElementById('explore-list');
-                if (list.length === 0) {
-                    container.innerHTML = `<div class="text-center py-10 text-white/50">No stations found.</div>`;
-                    return;
-                }
-                container.innerHTML = list.map(s => this.createListItem(s)).join('');
-            }
-
-            renderFavoritesList() {
-                const container = document.getElementById('favorites-list');
-                if (this.favorites.length === 0) {
-                    container.innerHTML = `<div class="flex flex-col items-center justify-center py-20 opacity-50"><i class="fa-regular fa-star text-5xl mb-4"></i><p>No favorites yet.</p></div>`;
-                    return;
-                }
-                container.innerHTML = this.favorites.map(s => this.createListItem(s)).join('');
-            }
-
-            filterStations() {
-                const query = document.getElementById('search-input').value.toLowerCase();
-                const filtered = this.stations.filter(s => s.name.toLowerCase().includes(query) || (s.tags && s.tags.toLowerCase().includes(query)));
-                this.renderExploreList(filtered);
-            }
-
-            /**
-             * Favorites
-             */
-            isFavorite(uuid) { return this.favorites.some(s => s.stationuuid === uuid); }
-
-            toggleFavoriteById(uuid) {
-                const station = this.stations.find(s => s.stationuuid === uuid) || this.currentStation;
-                if (!station) return;
-                
-                if (this.isFavorite(uuid)) this.favorites = this.favorites.filter(s => s.stationuuid !== uuid);
-                else this.favorites.push(station);
-                
-                localStorage.setItem('rb_favorites', JSON.stringify(this.favorites));
-                this.renderFavoritesList();
-                this.renderExploreList(this.stations); 
-                this.updatePlayerFavIcon();
-            }
-
-            toggleFavorite() {
-                if (this.currentStation) this.toggleFavoriteById(this.currentStation.stationuuid);
-            }
-
-            updatePlayerFavIcon() {
-                if (!this.currentStation) return;
-                const favClass = this.isFavorite(this.currentStation.stationuuid) ? "fa-solid fa-star text-yellow-400 drop-shadow-md" : "fa-regular fa-star text-gray-400";
-                document.getElementById('icon-fav').className = favClass;
-            }
-
-            /**
-             * Playback & Buffering
-             */
-            playStationFromList(uuid) {
-                const station = this.stations.find(s => s.stationuuid === uuid) || this.favorites.find(s => s.stationuuid === uuid);
-                if (station) {
-                    this.setStation(station, true);
-                    this.switchTab('player');
-                }
-            }
-
-            playRandom() {
-                if (this.stations.length === 0) return;
-                this.setStation(this.stations[Math.floor(Math.random() * this.stations.length)], true);
-            }
-
-            setStation(station, autoPlay = false) {
-                this.currentStation = station;
-                
-                // UI Updates
-                document.getElementById('player-name').textContent = station.name;
-                document.getElementById('mini-name').textContent = station.name;
-                
-                // Setup Art (Triggers lazy fetch if missing)
-                const initialImg = station.favicon || `https://ui-avatars.com/api/?name=${encodeURIComponent(station.name.substring(0,2))}&background=random&color=fff&size=256`;
-                const imgEl = document.getElementById('player-thumb');
-                imgEl.dataset.retried = ""; // reset try flag
-                imgEl.src = initialImg;
-                
-                document.getElementById('mini-thumb').src = initialImg;
-                
-                this.updatePlayerFavIcon();
-                this.setupMediaSession();
-
-                // Stop current
-                this.audio.pause();
-                clearInterval(this.bufferInterval);
-                this.isBuffering = false;
-                document.getElementById('buffer-overlay').classList.add('hidden');
-                
-                this.audio.src = station.url_resolved;
-                
-                if (autoPlay) this.togglePlay();
-                else this.updatePlayerStateUI();
-            }
-
-            startManualBuffer() {
-                if (!this.currentStation) return;
-                
-                // Pause and forcefully begin fetching data into cache
-                this.audio.pause();
-                this.audio.load();
-                
-                this.isBuffering = true;
-                this.isPlaying = false;
-                
-                let countdown = 30; 
-                const overlay = document.getElementById('buffer-overlay');
-                const countText = document.getElementById('buffer-count');
-                
-                overlay.classList.remove('hidden');
-                countText.textContent = countdown;
-                this.updatePlayerStateUI();
-
-                clearInterval(this.bufferInterval);
-                this.bufferInterval = setInterval(() => {
-                    countdown--;
-                    countText.textContent = countdown;
-                    
-                    if (countdown <= 0) {
-                        clearInterval(this.bufferInterval);
-                        this.isBuffering = false;
-                        overlay.classList.add('hidden');
-                        this.audio.play().catch(e => console.error(e));
-                        this.updatePlayerStateUI();
-                    }
-                }, 1000);
-            }
-
-            togglePlay() {
-                if (!this.currentStation) {
-                    this.playRandom();
-                    return;
-                }
-
-                if (this.isBuffering) {
-                    clearInterval(this.bufferInterval);
-                    this.isBuffering = false;
-                    document.getElementById('buffer-overlay').classList.add('hidden');
-                    this.updatePlayerStateUI();
-                    return;
-                }
-
-                if (this.isPlaying) {
-                    this.audio.pause();
-                } else {
-                    this.audio.play().catch(e => console.error(e));
-                }
-            }
-
-            updatePlayerStateUI() {
-                const stage = document.getElementById('player-stage');
-                const miniStage = document.getElementById('mini-stage');
-                const iconPlay = document.getElementById('icon-play');
-                const miniIconPlay = document.getElementById('mini-icon-play');
-                const miniStatus = document.getElementById('mini-status');
-                const nowPlaying = document.getElementById('player-now-playing');
-
-                if (this.isPlaying) {
-                    stage.classList.remove('is-paused'); stage.classList.add('is-playing');
-                    miniStage.classList.remove('is-paused'); miniStage.classList.add('is-playing');
-                    iconPlay.className = "fa-solid fa-pause text-4xl ml-0";
-                    miniIconPlay.className = "fa-solid fa-pause text-xl";
-                    miniStatus.textContent = "Live Broadcast";
-                    nowPlaying.textContent = "Live Broadcast - " + this.currentStation.name;
-                } else if (this.isBuffering) {
-                    stage.className = "relative w-64 h-64 mb-10 is-paused";
-                    miniStage.className = "w-10 h-10 shrink-0 is-paused";
-                    iconPlay.className = "fa-solid fa-xmark text-4xl ml-0 text-white/80";
-                    miniIconPlay.className = "fa-solid fa-xmark text-xl";
-                    miniStatus.textContent = "Buffering...";
-                    nowPlaying.textContent = "Buffering 30s cache...";
-                } else {
-                    stage.classList.remove('is-playing'); stage.classList.add('is-paused');
-                    miniStage.classList.remove('is-playing'); miniStage.classList.add('is-paused');
-                    iconPlay.className = "fa-solid fa-play text-4xl ml-2";
-                    miniIconPlay.className = "fa-solid fa-play text-xl ml-1";
-                    miniStatus.textContent = "Paused";
-                    nowPlaying.textContent = "Paused";
-                }
-            }
-
-            setupAudioListeners() {
-                this.audio.addEventListener('playing', () => {
-                    this.isPlaying = true;
-                    this.isBuffering = false;
-                    document.getElementById('buffer-overlay').classList.add('hidden');
-                    this.updatePlayerStateUI();
-                });
-                this.audio.addEventListener('pause', () => {
-                    this.isPlaying = false;
-                    this.updatePlayerStateUI();
-                });
-                this.audio.addEventListener('error', () => {
-                    this.isPlaying = false;
-                    this.isBuffering = false;
-                    document.getElementById('buffer-overlay').classList.add('hidden');
-                    document.getElementById('player-now-playing').textContent = 'Stream Offline';
-                    document.getElementById('mini-status').textContent = 'Offline';
-                    this.updatePlayerStateUI();
-                });
-            }
-
-            /**
-             * Sleep Timer
-             */
-            toggleSleepMenu() {
-                document.getElementById('sleep-timer-menu').classList.toggle('hidden');
-            }
-
-            setSleepTimer(mins) {
-                document.getElementById('sleep-timer-menu').classList.add('hidden');
-                const badge = document.getElementById('sleep-badge');
-                
-                clearInterval(this.sleepTimerInterval);
-                
-                if (mins === 0) {
-                    badge.classList.add('hidden');
-                    return;
-                }
-
-                badge.classList.remove('hidden');
-                badge.textContent = mins;
-                let remaining = mins * 60;
-                
-                this.sleepTimerInterval = setInterval(() => {
-                    remaining--;
-                    badge.textContent = Math.ceil(remaining / 60);
-                    if (remaining <= 0) {
-                        clearInterval(this.sleepTimerInterval);
-                        this.audio.pause();
-                        badge.classList.add('hidden');
-                    }
-                }, 1000);
-            }
-
-            setupMediaSession() {
-                if ('mediaSession' in navigator && this.currentStation) {
-                    navigator.mediaSession.metadata = new MediaMetadata({
-                        title: this.currentStation.name,
-                        artist: 'RelayBox FM',
-                        artwork: [ { src: document.getElementById('player-thumb').src, sizes: '512x512', type: 'image/png' } ]
-                    });
-                    navigator.mediaSession.setActionHandler('play', () => this.togglePlay());
-                    navigator.mediaSession.setActionHandler('pause', () => this.togglePlay());
-                    navigator.mediaSession.setActionHandler('nexttrack', () => this.playRandom());
-                }
-            }
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            setupPWA();
-            window.app = new RelayBoxApp();
+        // --- Service Worker Generator for Aggressive Buffering ---
+        // We dynamically inject a Service Worker to intercept stream requests and buffer them into memory.
+        const swScript = `
+            self.addEventListener('install', () => self.skipWaiting());
+            self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
             
-            // Close sleep menu when clicking outside
-            document.addEventListener('click', (e) => {
-                const menu = document.getElementById('sleep-timer-menu');
-                if(!menu.classList.contains('hidden')) menu.classList.add('hidden');
+            self.addEventListener('fetch', event => {
+                const url = new URL(event.request.url);
+                if (url.pathname === '/relaybox-buffer') {
+                    const targetStream = url.searchParams.get('stream');
+                    event.respondWith(handleBufferedStream(targetStream));
+                }
             });
+
+            async function handleBufferedStream(targetUrl) {
+                try {
+                    const response = await fetch(targetUrl);
+                    const reader = response.body.getReader();
+                    const buffer = [];
+                    let bytesLoaded = 0;
+                    
+                    // Aggressively download ~1MB (approx 1 min of audio) before yielding to player
+                    while (bytesLoaded < 1000000) {
+                        const {done, value} = await reader.read();
+                        if (done) break;
+                        buffer.push(value);
+                        bytesLoaded += value.length;
+                    }
+
+                    const stream = new ReadableStream({
+                        async start(controller) {
+                            // Push the pre-loaded buffer instantly
+                            buffer.forEach(chunk => controller.enqueue(chunk));
+                            // Continue fetching seamlessly
+                            while(true) {
+                                const {done, value} = await reader.read();
+                                if(done) break;
+                                controller.enqueue(value);
+                            }
+                            controller.close();
+                        }
+                    });
+
+                    return new Response(stream, {
+                        headers: { 'Content-Type': response.headers.get('Content-Type') || 'audio/mpeg' }
+                    });
+                } catch (e) {
+                    return fetch(targetUrl); // Fallback to direct stream if proxy fails
+                }
+            }
+        `;
+        const swBlob = new Blob([swScript], {type: 'application/javascript'});
+        const swUrl = URL.createObjectURL(swBlob);
+        
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register(swUrl).catch(err => console.warn("SW Registration failed (requires HTTPS):", err));
+        }
+
+        // --- Data Fetching ---
+        async function fetchMalayalamStations() {
+            const cached = localStorage.getItem('malayalam_stations');
+            if (cached) {
+                stations = JSON.parse(cached);
+                renderExploreList(stations);
+                renderFavorites();
+            }
+
+            try {
+                const res = await fetch("https://de1.api.radio-browser.info/json/stations/search?language=malayalam&hidebroken=true&order=clickcount&reverse=true&limit=200");
+                const data = await res.json();
+                if(data.length > 0) {
+                    stations = data;
+                    localStorage.setItem('malayalam_stations', JSON.stringify(stations));
+                    renderExploreList(stations);
+                    renderFavorites();
+                }
+            } catch (err) {
+                console.error("Failed to update stations", err);
+            }
+        }
+
+        // --- Artwork Fallback Generator ---
+        function getArtwork(station) {
+            if (station.favicon && station.favicon.startsWith('http')) return station.favicon;
+            const fallbackName = encodeURIComponent(station.name.substring(0, 2));
+            return `https://ui-avatars.com/api/?name=${fallbackName}&background=random&color=fff&size=250`;
+        }
+
+        // --- UI Rendering ---
+        function renderExploreList(data) {
+            const list = document.getElementById('explore-list');
+            list.innerHTML = '';
+            data.forEach(station => list.appendChild(createStationCard(station)));
+        }
+
+        function renderFavorites() {
+            const list = document.getElementById('stars-list');
+            list.innerHTML = '';
+            const favStations = stations.filter(s => favorites.includes(s.stationuuid));
+            if(favStations.length === 0) list.innerHTML = '<p style="color:var(--text-muted); text-align:center;">No favorites yet. Star some in Explore!</p>';
+            favStations.forEach(station => list.appendChild(createStationCard(station)));
+        }
+
+        function createStationCard(station) {
+            const isFav = favorites.includes(station.stationuuid);
+            const card = document.createElement('div');
+            card.className = 'station-card';
+            card.innerHTML = `
+                <img src="${getArtwork(station)}" class="st-img" onerror="this.src='https://ui-avatars.com/api/?name=FM&background=random'">
+                <div class="st-info" onclick='playStationById("${station.stationuuid}")'>
+                    <div class="st-name">${station.name}</div>
+                    <div class="st-tags">${station.tags.split(',').slice(0,3).join(' • ')}</div>
+                </div>
+                <div class="st-actions">
+                    <button class="btn-icon ${isFav ? 'active' : ''}" onclick='toggleFavorite("${station.stationuuid}", this)'>
+                        <i class="${isFav ? 'fas' : 'far'} fa-star"></i>
+                    </button>
+                </div>
+            `;
+            return card;
+        }
+
+        // --- Tab Management ---
+        let currentTab = 'music';
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            document.getElementById(`nav-${tabId}`).classList.add('active');
+            currentTab = tabId;
+
+            const miniPlayer = document.getElementById('mini-player');
+            if (tabId === 'music' || !currentStation) {
+                miniPlayer.classList.remove('visible');
+            } else {
+                miniPlayer.classList.add('visible');
+            }
+        }
+
+        // --- Player Logic ---
+        function playStationById(uuid) {
+            const station = stations.find(s => s.stationuuid === uuid);
+            if(station) loadAndPlayStation(station);
+        }
+
+        function playRandomStation() {
+            if(stations.length === 0) return;
+            const random = stations[Math.floor(Math.random() * stations.length)];
+            loadAndPlayStation(random);
+        }
+
+        function loadAndPlayStation(station) {
+            currentStation = station;
+            
+            // Update UI
+            const art = getArtwork(station);
+            document.getElementById('main-artwork').src = art;
+            document.getElementById('mini-artwork').src = art;
+            document.getElementById('main-title').textContent = station.name;
+            document.getElementById('mini-title').textContent = station.name;
+            document.getElementById('main-sub').textContent = "Connecting...";
+            document.getElementById('mini-sub').textContent = "Connecting...";
+            
+            updateMainStarButton();
+
+            // Set Audio Source based on Buffer Setting
+            isBufferingMode = document.getElementById('toggle-buffer').checked;
+            
+            if (isBufferingMode && navigator.serviceWorker.controller) {
+                // Route through the aggressive caching Service Worker
+                audio.src = `/relaybox-buffer?stream=${encodeURIComponent(station.url_resolved)}`;
+                document.getElementById('main-sub').textContent = "Building Buffer (Takes ~10s)...";
+            } else {
+                // Direct stream
+                audio.src = station.url_resolved;
+            }
+
+            audio.play().catch(e => {
+                console.error("Playback failed", e);
+                document.getElementById('main-sub').textContent = "Error playing station";
+            });
+
+            // Set Media Session for Lock Screen
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: station.name,
+                    artist: 'RelayBox FM (by Madhav)',
+                    album: 'Live Radio',
+                    artwork: [{ src: art, sizes: '256x256', type: 'image/png' }]
+                });
+                navigator.mediaSession.setActionHandler('play', togglePlay);
+                navigator.mediaSession.setActionHandler('pause', togglePlay);
+            }
+        }
+
+        function togglePlay() {
+            if(!currentStation) return;
+            if (audio.paused) {
+                audio.play();
+            } else {
+                audio.pause();
+            }
+        }
+
+        // --- Audio Events ---
+        audio.addEventListener('play', () => {
+            document.getElementById('play-icon-main').style.display = 'none';
+            document.getElementById('main-loader').style.display = 'block';
         });
+
+        audio.addEventListener('playing', () => {
+            isPlaying = true;
+            document.getElementById('play-icon-main').className = 'fas fa-pause';
+            document.getElementById('play-icon-mini').className = 'fas fa-pause';
+            document.getElementById('play-icon-main').style.display = 'block';
+            document.getElementById('main-loader').style.display = 'none';
+            
+            document.querySelectorAll('.spin').forEach(el => el.classList.remove('paused'));
+            document.getElementById('main-sub').textContent = isBufferingMode ? "Playing from Buffer" : "Playing Live";
+            document.getElementById('mini-sub').textContent = "Now Playing";
+        });
+
+        audio.addEventListener('pause', () => {
+            isPlaying = false;
+            document.getElementById('play-icon-main').className = 'fas fa-play';
+            document.getElementById('play-icon-mini').className = 'fas fa-play';
+            document.getElementById('play-icon-main').style.display = 'block';
+            document.getElementById('main-loader').style.display = 'none';
+            
+            document.querySelectorAll('.spin').forEach(el => el.classList.add('paused'));
+            document.getElementById('main-sub').textContent = "Paused";
+            document.getElementById('mini-sub').textContent = "Paused";
+        });
+
+        document.getElementById('btn-play-main').addEventListener('click', togglePlay);
+
+        // --- Favorites Management ---
+        function toggleFavorite(uuid, btnElement) {
+            if (favorites.includes(uuid)) {
+                favorites = favorites.filter(id => id !== uuid);
+                if(btnElement) btnElement.classList.remove('active');
+                if(btnElement) btnElement.innerHTML = '<i class="far fa-star"></i>';
+            } else {
+                favorites.push(uuid);
+                if(btnElement) btnElement.classList.add('active');
+                if(btnElement) btnElement.innerHTML = '<i class="fas fa-star"></i>';
+            }
+            localStorage.setItem('favorites', JSON.stringify(favorites));
+            renderFavorites();
+            if(currentStation && currentStation.stationuuid === uuid) updateMainStarButton();
+        }
+
+        function updateMainStarButton() {
+            const btn = document.getElementById('btn-star-main');
+            if(!currentStation) return;
+            if(favorites.includes(currentStation.stationuuid)) {
+                btn.classList.add('active');
+                btn.innerHTML = '<i class="fas fa-star"></i>';
+            } else {
+                btn.classList.remove('active');
+                btn.innerHTML = '<i class="far fa-star"></i>';
+            }
+            btn.onclick = () => toggleFavorite(currentStation.stationuuid);
+        }
+
+        // --- Search functionality ---
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = stations.filter(s => s.name.toLowerCase().includes(query) || s.tags.toLowerCase().includes(query));
+            renderExploreList(filtered);
+        });
+
+        // --- Sleep Timer ---
+        document.getElementById('sleep-timer-select').addEventListener('change', (e) => {
+            clearTimeout(sleepTimerId);
+            const minutes = parseInt(e.target.value);
+            if (minutes > 0) {
+                sleepTimerId = setTimeout(() => {
+                    audio.pause();
+                    document.getElementById('sleep-timer-select').value = "0";
+                    if ('vibrate' in navigator) navigator.vibrate(500);
+                }, minutes * 60000);
+            }
+        });
+
+        // Initialize
+        fetchMalayalamStations();
     </script>
 </body>
 </html>

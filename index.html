@@ -28,12 +28,10 @@
             height: 100vh; overflow: hidden; display: flex; flex-direction: column;
         }
 
-        /* Header */
         header { padding: 15px; text-align: center; background: rgba(15, 12, 41, 0.8); backdrop-filter: blur(10px); z-index: 10; }
         .logo { font-size: 1.4rem; font-weight: 800; letter-spacing: 1px; }
         .author { font-size: 11px; font-weight: 300; opacity: 0.7; color: var(--accent); }
 
-        /* Main Views (Explore & Stars) */
         .views-container { flex: 1; position: relative; overflow-y: auto; overflow-x: hidden; padding-bottom: calc(var(--nav-height) + var(--mini-height) + 20px); }
         .view-pane { position: absolute; top: 0; left: 0; width: 100%; min-height: 100%; opacity: 0; pointer-events: none; padding: 15px; transition: opacity 0.3s; }
         .view-pane.active { opacity: 1; pointer-events: auto; }
@@ -60,8 +58,7 @@
         /* YouTube Music Style Mini Player */
         .mini-player {
             position: fixed; bottom: var(--nav-height); left: 0; width: 100%; height: var(--mini-height);
-            background: #212121; /* YT Music Dark */
-            display: flex; align-items: center; padding: 0 15px;
+            background: #212121; display: flex; align-items: center; padding: 0 15px;
             transform: translateY(150%); transition: transform 0.4s cubic-bezier(0.3, 1, 0.3, 1);
             z-index: 40; cursor: pointer; border-bottom: 1px solid #333;
         }
@@ -72,7 +69,7 @@
         .mini-sub { font-size: 0.8rem; color: var(--text-muted); }
         .btn-mini-play { background: none; border: none; color: white; font-size: 1.4rem; padding: 10px; }
         
-        /* Thin Snackbar for Mini Player */
+        /* Thin Snackbar */
         .mini-progress-bg { position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: rgba(255,255,255,0.1); }
         .mini-progress-grey { position: absolute; top: 0; left: 0; height: 100%; background: #888; width: 0%; transition: width 0.3s; }
         .mini-progress-pink { position: absolute; top: 0; left: 0; height: 100%; background: var(--accent); width: 0%; transition: width 0.1s; }
@@ -149,13 +146,10 @@
     </header>
 
     <div class="views-container">
-        <!-- Explore Tab -->
         <div class="view-pane active" id="view-explore">
             <input type="text" class="search-bar" id="search-input" placeholder="Search Malayalam stations...">
             <div class="station-list" id="explore-list"></div>
         </div>
-
-        <!-- Stars Tab -->
         <div class="view-pane" id="view-stars">
             <h3 style="margin-bottom: 15px;">Your Favorites</h3>
             <div class="station-list" id="stars-list"></div>
@@ -178,7 +172,6 @@
         </div>
     </div>
 
-    <!-- Bottom Nav -->
     <div class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('explore')" id="nav-explore">
             <i class="fas fa-compass"></i><span class="nav-label">Explore</span>
@@ -211,7 +204,7 @@
                 </div>
                 <div class="progress-labels">
                     <span id="time-played">0:00</span>
-                    <span id="time-buffered">0:00 Cached</span>
+                    <span id="time-buffered">0s Cache</span>
                 </div>
             </div>
 
@@ -234,159 +227,70 @@
         </div>
     </div>
 
-    <!-- Native Engine Tags -->
+    <!-- NATIVE AUDIO ENGINES -->
     <audio id="real-audio" crossorigin="anonymous"></audio>
-    <!-- Silent CPU Wake Lock to bypass Doze while downloading buffer -->
+    <!-- Silent CPU Wake Lock to bypass Doze -->
     <audio id="wakelock" loop src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU5LjI3LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIAD+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+"></audio>
 
     <script>
-        // --- Core Service Worker: The 30s Delay & Background Hoarder ---
-        // This runs in the background. It intercepts the stream, fetches it, and holds it.
-        const swCode = `
-            let bufferQueue = [];
-            let fetchActive = false;
-            let accumulatedBytes = 0;
-            let targetBytes = 0;
-            let reader = null;
-            let isBufferMode = true;
-
-            self.addEventListener('install', () => self.skipWaiting());
-            self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
-
-            self.addEventListener('message', e => {
-                if (e.data.action === 'START_FETCH') {
-                    fetchActive = false; if(reader) reader.cancel();
-                    bufferQueue = []; accumulatedBytes = 0;
-                    isBufferMode = e.data.useBuffer;
-                    // ~30 seconds of audio at standard 128kbps is ~480KB. 
-                    targetBytes = isBufferMode ? 480000 : 0; 
-                    startBackgroundFetch(e.data.url);
-                }
-            });
-
-            async function startBackgroundFetch(url) {
-                fetchActive = true;
-                try {
-                    const res = await fetch(url);
-                    reader = res.body.getReader();
-                    while(fetchActive) {
-                        // Cap memory hoard at 20MB (~20 mins of paused hoarding)
-                        if (accumulatedBytes > 20000000) { await new Promise(r => setTimeout(r, 1000)); continue; }
-
-                        const { done, value } = await reader.read();
-                        if(done) break;
-                        
-                        bufferQueue.push(value);
-                        accumulatedBytes += value.length;
-                        
-                        // Notify UI of buffer growth
-                        self.clients.matchAll().then(clients => {
-                            clients.forEach(c => c.postMessage({
-                                action: 'PROGRESS',
-                                bytes: accumulatedBytes,
-                                ready: accumulatedBytes >= targetBytes
-                            }));
-                        });
-                    }
-                } catch(e) {}
-            }
-
-            self.addEventListener('fetch', event => {
-                const url = new URL(event.request.url);
-                if (url.pathname === '/play-buffer') {
-                    event.respondWith(new Response(new ReadableStream({
-                        async start(controller) {
-                            async function pump() {
-                                if (!fetchActive && bufferQueue.length === 0) { controller.close(); return; }
-                                
-                                // HARD WAIT: Do not feed audio to player until 30s target is reached!
-                                if (isBufferMode && accumulatedBytes < targetBytes) {
-                                    setTimeout(pump, 200); return;
-                                }
-
-                                if (bufferQueue.length > 0) {
-                                    controller.enqueue(bufferQueue.shift());
-                                    pump(); // feed natively as fast as Android demands
-                                } else {
-                                    setTimeout(pump, 50);
-                                }
-                            }
-                            pump();
-                        }
-                    }), { headers: { 'Content-Type': 'audio/mpeg' } }));
-                }
-            });
-        `;
-        const blob = new Blob([swCode], {type: 'application/javascript'});
-        navigator.serviceWorker.register(URL.createObjectURL(blob));
-
-        // --- Application State ---
         let stations = [], favorites = JSON.parse(localStorage.getItem('favs')) || [];
         let currentStation = null;
         let useAggressiveBuffer = true;
-        let downloadedSeconds = 0;
-        let streamReadyToPlay = false;
+        let isHoardingWait = false;
+        let hoardingCheckInterval = null;
         
         const audio = document.getElementById('real-audio');
         const wakelock = document.getElementById('wakelock');
 
-        // --- Handle Service Worker Progress ---
-        navigator.serviceWorker.addEventListener('message', e => {
-            if (e.data.action === 'PROGRESS') {
-                // Convert bytes to approximate seconds (128kbps = 16KB/s)
-                downloadedSeconds = Math.floor(e.data.bytes / 16000);
-                
-                if (useAggressiveBuffer && !streamReadyToPlay) {
-                    if (e.data.ready) {
-                        streamReadyToPlay = true;
-                        updateStatus("Playing from Buffer");
-                        audio.src = '/play-buffer?t=' + Date.now(); 
-                        audio.play();
-                    } else {
-                        // Countdown 0 to 30s
-                        updateStatus(`Buffering... ${downloadedSeconds}s / 30s`);
-                    }
-                }
-                updateProgressBars();
-            }
-        });
+        // Network Keep-Alive Ping (Prevents Wi-Fi Sleep)
+        setInterval(() => {
+            if(!audio.paused) fetch('https://www.google.com/favicon.ico?' + Date.now(), { mode: 'no-cors' }).catch(()=>{});
+        }, 15000);
 
-        // --- UI Math: The Grey/Pink Snackbars ---
-        function updateProgressBars() {
-            if (!currentStation) return;
-            const playedSecs = audio.currentTime || 0;
+        // --- Visual UI Progress Engine (YouTube Style) ---
+        setInterval(() => {
+            if (audio.readyState === 0) return;
             
-            // Format labels
-            document.getElementById('time-played').textContent = formatTime(playedSecs);
-            document.getElementById('time-buffered').textContent = formatTime(downloadedSeconds) + " Cached";
+            let bufferLead = 0;
+            if (audio.buffered.length > 0) {
+                // Calculate how many seconds of audio Android has natively downloaded ahead of our current playback
+                bufferLead = audio.buffered.end(audio.buffered.length - 1) - audio.currentTime;
+            }
+            
+            // Map the hardware cache visually. Android usually caps live buffers around 10-15s.
+            let greyPercent = Math.min(100, (bufferLead / 10) * 100); 
+            let pinkPercent = 90; // For live radio, playhead is fixed near the right edge
+            
+            if (bufferLead > 0.5) {
+                document.getElementById('max-pink').style.width = pinkPercent + '%';
+                document.getElementById('mini-pink').style.width = pinkPercent + '%';
+                
+                // Grey cache wraps slightly ahead of the pink live-head
+                document.getElementById('max-grey').style.width = (pinkPercent + (greyPercent * 0.1)) + '%';
+                document.getElementById('mini-grey').style.width = (pinkPercent + (greyPercent * 0.1)) + '%';
+            } else {
+                document.getElementById('max-pink').style.width = '0%';
+                document.getElementById('max-grey').style.width = '0%';
+                document.getElementById('mini-pink').style.width = '0%';
+                document.getElementById('mini-grey').style.width = '0%';
+            }
 
-            // The Grey bar represents the total cache pool (always 100% wide for aesthetics, or capping).
-            // The Pink bar is the % of the cache we have consumed.
-            // If downloaded 60s and played 15s, Pink is at 25%.
-            // If you pause, downloadedSecs grows, so Pink visually shrinks backwards (meaning more buffer ahead!).
-            let pinkPercent = downloadedSeconds > 0 ? (playedSecs / downloadedSeconds) * 100 : 0;
-            if (pinkPercent > 100) pinkPercent = 100;
-
-            document.getElementById('max-grey').style.width = '100%';
-            document.getElementById('mini-grey').style.width = '100%';
-            document.getElementById('max-pink').style.width = `${pinkPercent}%`;
-            document.getElementById('mini-pink').style.width = `${pinkPercent}%`;
-        }
-
-        setInterval(updateProgressBars, 1000); // Live tick
+            document.getElementById('time-buffered').textContent = Math.floor(bufferLead) + "s Cached";
+            document.getElementById('time-played').textContent = formatTime(audio.currentTime);
+        }, 500);
 
         function formatTime(s) {
+            if (isNaN(s)) return "0:00";
             const m = Math.floor(s / 60);
             const r = Math.floor(s % 60);
             return `${m}:${r < 10 ? '0' : ''}${r}`;
         }
 
-        // --- Playback Logic ---
+        // --- Playback Engine (Delayed Native Buffer) ---
         function playStation(uuid) {
             currentStation = stations.find(s => s.stationuuid === uuid);
             if(!currentStation) return;
 
-            // UI Setup
             const art = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentStation.name.substring(0,2))}&background=24243e&color=ff007f&size=300`;
             document.getElementById('mini-img').src = art;
             document.getElementById('max-artwork').src = art;
@@ -395,24 +299,34 @@
             document.getElementById('mini-player').classList.add('visible');
             updateStarBtn();
 
-            audio.pause();
-            downloadedSeconds = 0;
-            streamReadyToPlay = !useAggressiveBuffer;
-
-            // Force CPU Awake immediately so Doze doesn't block the 30s wait
-            wakelock.play().catch(()=>{}); 
+            clearInterval(hoardingCheckInterval);
+            audio.src = currentStation.url_resolved;
+            wakelock.play().catch(()=>{}); // Engage Doze Bypass immediately
 
             if (useAggressiveBuffer) {
-                updateStatus("Connecting...");
-                navigator.serviceWorker.controller.postMessage({
-                    action: 'START_FETCH', url: currentStation.url_resolved, useBuffer: true
-                });
+                // START MUTED TO HOARD AUDIO
+                audio.muted = true;
+                isHoardingWait = true;
+                updateStatus("Allocating Hardware Cache...");
+                audio.play();
+
+                hoardingCheckInterval = setInterval(() => {
+                    if (audio.buffered.length > 0) {
+                        const bufferSize = audio.buffered.end(audio.buffered.length - 1) - audio.currentTime;
+                        if (bufferSize >= 5) { // Once Chrome has packed 5+ seconds natively
+                            clearInterval(hoardingCheckInterval);
+                            audio.muted = false; // Restore volume
+                            isHoardingWait = false;
+                            updateStatus("Playing from Buffer");
+                        } else {
+                            updateStatus(`Caching... ${Math.floor(bufferSize)}s / 5s`);
+                        }
+                    }
+                }, 500);
             } else {
-                updateStatus("Live Stream");
-                navigator.serviceWorker.controller.postMessage({
-                    action: 'START_FETCH', url: currentStation.url_resolved, useBuffer: false
-                });
-                audio.src = '/play-buffer?t=' + Date.now();
+                audio.muted = false;
+                isHoardingWait = false;
+                updateStatus("Playing Live");
                 audio.play();
             }
 
@@ -426,12 +340,11 @@
         function togglePlay() {
             if(!currentStation) return;
             if (audio.paused) {
-                if (streamReadyToPlay) audio.play();
+                audio.play();
                 wakelock.play();
             } else {
-                // If paused, audio stops, but SW continues fetching in background!
                 audio.pause();
-                updateStatus("Paused (Hoarding Buffer...)");
+                wakelock.pause();
             }
         }
 
@@ -439,13 +352,18 @@
             document.getElementById('btn-play-mini').innerHTML = '<i class="fas fa-pause"></i>';
             document.getElementById('btn-play-max').innerHTML = '<i class="fas fa-pause"></i>';
             document.querySelector('.spin').classList.remove('paused');
-            updateStatus(useAggressiveBuffer ? "Playing from Buffer" : "Playing Live");
+            if (!isHoardingWait) updateStatus(useAggressiveBuffer ? "Playing from Buffer" : "Playing Live");
         });
 
         audio.addEventListener('pause', () => {
             document.getElementById('btn-play-mini').innerHTML = '<i class="fas fa-play"></i>';
             document.getElementById('btn-play-max').innerHTML = '<i class="fas fa-play"></i>';
             document.querySelector('.spin').classList.add('paused');
+            updateStatus("Paused");
+        });
+        
+        audio.addEventListener('waiting', () => {
+            updateStatus("Recovering Stream...");
         });
 
         function updateStatus(text) {
@@ -454,9 +372,7 @@
         }
 
         // --- Interactions & UI ---
-        function togglePlayerMax() {
-            document.getElementById('max-player').classList.toggle('open');
-        }
+        function togglePlayerMax() { document.getElementById('max-player').classList.toggle('open'); }
 
         function switchTab(tab) {
             document.querySelectorAll('.view-pane, .nav-item').forEach(e => e.classList.remove('active'));
@@ -472,7 +388,7 @@
             } else {
                 btn.classList.remove('active'); btn.innerHTML = '<i class="fas fa-stream"></i> Buffer OFF';
             }
-            if (currentStation) playStation(currentStation.stationuuid); // restart to apply
+            if (currentStation) playStation(currentStation.stationuuid);
         }
 
         // --- Data & Rendering ---
@@ -540,7 +456,7 @@
         // Sleep timer
         document.getElementById('sleep-timer-select').addEventListener('change', e => {
             const mins = parseInt(e.target.value);
-            if (mins > 0) setTimeout(() => audio.pause(), mins * 60000);
+            if (mins > 0) setTimeout(() => { audio.pause(); wakelock.pause(); }, mins * 60000);
         });
 
         fetchStations();

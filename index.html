@@ -4,25 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>RelayBox FM</title>
+    
+    <link id="manifest-link" rel="manifest" href="">
     <meta name="theme-color" content="#0f0c29">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Fonts and Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         :root {
             --bg-dark: #0f0c29;
             --bg-mid: #302b63;
             --bg-light: #24243e;
-            --accent: #00f2fe;
-            --accent-glow: rgba(0, 242, 254, 0.4);
+            --primary: #ec4899;
+            --primary-glow: rgba(236, 72, 153, 0.4);
             --text-main: #ffffff;
             --text-muted: #a099b0;
             --glass: rgba(255, 255, 255, 0.05);
             --glass-border: rgba(255, 255, 255, 0.1);
-            --nav-height: 70px;
-            --mini-player-height: 75px;
+            --nav-height: 75px;
+            --mini-player-height: 70px;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
 
         body {
             font-family: 'Outfit', sans-serif;
@@ -33,6 +44,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            user-select: none;
         }
 
         /* Header */
@@ -41,11 +53,14 @@
             text-align: center;
             background: rgba(15, 12, 41, 0.6);
             backdrop-filter: blur(15px);
-            z-index: 10;
+            -webkit-backdrop-filter: blur(15px);
+            z-index: 30;
             border-bottom: 1px solid var(--glass-border);
+            flex-shrink: 0;
         }
-        .logo { font-size: 1.6rem; font-weight: 800; letter-spacing: 1px; }
-        .author { font-size: 12px; font-weight: 300; opacity: 0.7; vertical-align: middle; margin-left: 5px; color: var(--accent); }
+        .logo { font-size: 1.4rem; font-weight: 800; letter-spacing: 0.5px; }
+        .logo span { color: var(--primary); }
+        .author { font-size: 10px; font-weight: 300; opacity: 0.7; vertical-align: text-top; margin-left: 4px; }
 
         /* Tabs */
         .tab-content {
@@ -56,146 +71,186 @@
             position: absolute; top: 0; left: 0; width: 100%; min-height: 100%;
             opacity: 0; pointer-events: none; padding: 20px;
             transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            transform: scale(0.95) translateY(20px);
+            transform: scale(0.95) translateY(10px);
         }
         .tab-pane.active { opacity: 1; pointer-events: auto; transform: scale(1) translateY(0); }
 
         /* Music Player Tab */
-        .player-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; }
+        .player-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; text-align: center; }
+        
         .artwork-container {
-            width: 260px; height: 260px; border-radius: 50%;
-            background: var(--glass); border: 2px solid var(--glass-border);
-            margin-bottom: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            width: 250px; height: 250px; border-radius: 50%;
+            background: var(--glass); border: 3px solid var(--glass-border);
+            margin-bottom: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,0,0,0.5);
             overflow: hidden; display: flex; justify-content: center; align-items: center;
-            transition: transform 0.3s ease;
+            position: relative; transition: transform 0.3s ease;
         }
         .artwork-container img { width: 100%; height: 100%; object-fit: cover; }
-        .spin { animation: spin 12s linear infinite; }
+        .artwork-container::after {
+            content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 15%; height: 15%; background: var(--bg-dark); border-radius: 50%;
+            border: 2px solid var(--glass-border); z-index: 10;
+        }
+        .spin { animation: spin 8s linear infinite; }
         .spin.paused { animation-play-state: paused; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        .station-title { font-size: 1.8rem; font-weight: 600; margin-bottom: 5px; padding: 0 15px; line-height: 1.2; }
-        .now-playing-text { font-size: 0.95rem; color: var(--accent); min-height: 24px; margin-bottom: 30px; letter-spacing: 0.5px; }
-
-        .controls { display: flex; align-items: center; gap: 35px; margin-bottom: 40px; }
-        .btn-main {
-            width: 70px; height: 70px; border-radius: 50%;
-            background: var(--accent); color: var(--bg-dark);
-            border: none; font-size: 1.8rem;
-            display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 4px 20px var(--accent-glow);
-            cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+        /* Progress Snackbar */
+        .progress-snackbar {
+            width: 250px; height: 6px; background: rgba(255,255,255,0.1);
+            border-radius: 4px; margin: 0 auto 30px auto;
+            position: relative; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
         }
-        .btn-main:active { transform: scale(0.9); }
-        
+        .progress-buffer {
+            position: absolute; top: 0; left: 0; height: 100%; width: 0%;
+            background: #9ca3af; transition: width 0.3s linear;
+        }
+        .progress-play {
+            position: absolute; top: 0; left: 0; height: 100%; width: 0%;
+            background: var(--primary); transition: width 0.1s linear;
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .station-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 5px; padding: 0 15px; line-height: 1.2; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .now-playing-text { font-size: 0.9rem; color: var(--primary); min-height: 20px; margin-bottom: 30px; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }
+
         .btn-buffer {
-            background: rgba(0, 242, 254, 0.1); border: 1px solid var(--accent);
-            color: var(--accent); padding: 12px 25px; border-radius: 30px;
-            font-family: 'Outfit'; font-size: 1rem; font-weight: 600;
-            cursor: pointer; transition: all 0.3s; margin-bottom: 20px;
-            display: flex; align-items: center; gap: 10px;
+            background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+            color: white; padding: 12px 25px; border-radius: 30px;
+            font-family: 'Outfit'; font-size: 0.9rem; font-weight: 600;
+            cursor: pointer; transition: all 0.3s; margin-bottom: 30px;
+            display: flex; align-items: center; gap: 10px; backdrop-filter: blur(10px);
         }
         .btn-buffer:active { transform: scale(0.95); }
-        .btn-buffer.active { background: var(--accent); color: var(--bg-dark); box-shadow: 0 0 15px var(--accent-glow); }
+        .btn-buffer.active { background: var(--primary); border-color: var(--primary); color: white; box-shadow: 0 0 20px var(--primary-glow); }
+
+        .controls { display: flex; align-items: center; justify-content: center; gap: 40px; margin-bottom: 30px; width: 100%; }
+        .btn-main {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), #8b5cf6); color: white;
+            border: 2px solid rgba(255,255,255,0.2); font-size: 2rem;
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 10px 30px var(--primary-glow);
+            cursor: pointer; transition: transform 0.2s;
+        }
+        .btn-main:active { transform: scale(0.9); }
+        .btn-side { background: none; border: none; color: var(--text-muted); font-size: 1.8rem; cursor: pointer; transition: color 0.3s, transform 0.2s; }
+        .btn-side:active { transform: scale(0.9); }
+        .btn-side.active { color: #ffd700; text-shadow: 0 0 15px rgba(255,215,0,0.5); }
 
         .sleep-timer {
             background: var(--glass); border: 1px solid var(--glass-border);
             padding: 10px 20px; border-radius: 20px; color: var(--text-muted);
-            display: flex; align-items: center; gap: 10px; font-size: 0.9rem;
+            display: flex; align-items: center; gap: 10px; font-size: 0.9rem; backdrop-filter: blur(5px);
         }
-        .sleep-timer select { background: transparent; color: white; border: none; outline: none; font-family: 'Outfit'; font-weight: 600; }
+        .sleep-timer select { background: transparent; color: white; border: none; outline: none; font-family: 'Outfit'; font-weight: 600; cursor: pointer; }
+        .sleep-timer select option { background: var(--bg-dark); }
 
-        /* Lists (Explore & Stars) */
+        /* Lists */
         .search-bar {
-            width: 100%; padding: 16px 20px; border-radius: 25px;
+            width: 100%; padding: 15px 25px; border-radius: 30px;
             background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
             color: white; font-family: 'Outfit'; margin-bottom: 20px; font-size: 1rem;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); outline: none;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); outline: none; transition: border-color 0.3s;
         }
-        .search-bar:focus { border-color: var(--accent); }
+        .search-bar:focus { border-color: var(--primary); }
+        
         .station-list { display: flex; flex-direction: column; gap: 12px; }
         .station-card {
             display: flex; align-items: center; padding: 12px;
             background: var(--glass); border-radius: 20px;
-            border: 1px solid var(--glass-border); backdrop-filter: blur(5px);
-            transition: background 0.2s, transform 0.2s;
+            border: 1px solid var(--glass-border); backdrop-filter: blur(10px);
+            transition: background 0.2s, transform 0.2s, border-color 0.2s;
         }
         .station-card:active { background: rgba(255,255,255,0.1); transform: scale(0.98); }
-        .st-img { width: 55px; height: 55px; border-radius: 50%; margin-right: 15px; object-fit: cover; border: 1px solid var(--glass-border); }
-        .st-info { flex: 1; overflow: hidden; }
-        .st-name { font-weight: 600; font-size: 1.1rem; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-        .st-tags { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
-        .btn-star { background: none; border: none; color: var(--text-muted); font-size: 1.4rem; cursor: pointer; padding: 10px; transition: color 0.3s; }
-        .btn-star.active { color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
+        .station-card.playing { border-color: var(--primary); background: rgba(236, 72, 153, 0.1); }
+        .st-img { width: 55px; height: 55px; border-radius: 15px; margin-right: 15px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); }
+        .st-info { flex: 1; overflow: hidden; cursor: pointer; }
+        .st-name { font-weight: 600; font-size: 1.05rem; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+        .st-tags { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* Mini Player */
         .mini-player {
-            position: fixed; bottom: var(--nav-height); left: 0; width: 100%;
-            height: var(--mini-player-height);
-            background: rgba(15, 12, 41, 0.95); backdrop-filter: blur(20px);
-            border-top: 1px solid var(--glass-border);
-            display: flex; align-items: center; padding: 0 20px;
+            position: fixed; bottom: var(--nav-height); left: 10px; right: 10px;
+            height: var(--mini-player-height); border-radius: 20px;
+            background: rgba(48, 43, 99, 0.95); backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            display: flex; align-items: center; padding: 0 15px;
             transform: translateY(150%); opacity: 0;
-            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
-            z-index: 20; cursor: pointer; box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+            z-index: 20; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        .mini-player.visible { transform: translateY(0); opacity: 1; }
-        .mini-img { width: 48px; height: 48px; border-radius: 50%; margin-right: 15px; border: 1px solid var(--glass-border); }
+        .mini-player.visible { transform: translateY(-10px); opacity: 1; }
+        .mini-img { width: 45px; height: 45px; border-radius: 50%; margin-right: 15px; border: 1px solid rgba(255,255,255,0.2); }
         .mini-info { flex: 1; overflow: hidden; }
-        .mini-title { font-weight: 600; font-size: 1rem; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-        .mini-sub { font-size: 0.8rem; color: var(--accent); }
-        .btn-mini-play { background: none; border: none; color: var(--text-main); font-size: 1.6rem; cursor: pointer; padding: 10px; }
+        .mini-title { font-weight: 600; font-size: 0.95rem; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+        .mini-sub { font-size: 0.75rem; color: var(--primary); font-weight: 600; text-transform: uppercase; }
+        .btn-mini-play { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; padding: 10px; }
 
         /* Bottom Nav */
         .bottom-nav {
             position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height);
-            background: rgba(10, 5, 20, 0.85); backdrop-filter: blur(20px);
+            background: rgba(15, 12, 41, 0.85); backdrop-filter: blur(20px);
             display: flex; justify-content: space-around; align-items: center;
             border-top: 1px solid var(--glass-border); z-index: 30;
         }
         .nav-item {
-            color: var(--text-muted); font-size: 1.4rem; padding: 15px 30px;
+            color: var(--text-muted); font-size: 1.3rem; padding: 10px 20px;
             cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            display: flex; flex-direction: column; align-items: center; gap: 4px; width: 33%;
         }
-        .nav-item.active { color: var(--accent); transform: translateY(-5px); text-shadow: 0 0 15px var(--accent-glow); }
-        .nav-label { font-size: 0.7rem; font-weight: 600; opacity: 0; transition: opacity 0.3s; }
+        .nav-item.active { color: var(--primary); transform: translateY(-3px); }
+        .nav-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; transition: opacity 0.3s; }
         .nav-item.active .nav-label { opacity: 1; }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo">RelayBox FM <span class="author">by Madhav</span></div>
+        <div class="logo">RelayBox <span>FM</span><span class="author">by Madhav</span></div>
     </header>
 
     <div class="tab-content">
         <!-- Player Tab -->
         <div class="tab-pane active" id="tab-music">
             <div class="player-wrapper">
+                
                 <div class="artwork-container" id="art-container">
                     <img id="main-artwork" src="https://ui-avatars.com/api/?name=FM&background=24243e&color=fff&size=260" class="spin paused" alt="Artwork">
+                </div>
+                
+                <!-- YouTube Style Buffer Progress Bar -->
+                <div class="progress-snackbar">
+                    <div class="progress-buffer" id="bar-grey"></div>
+                    <div class="progress-play" id="bar-pink"></div>
                 </div>
                 
                 <div class="station-title" id="main-title">Select a Station</div>
                 <div class="now-playing-text" id="main-sub">Ready to tune in</div>
                 
-                <button class="btn-buffer" id="btn-create-buffer" onclick="activateAntiDozeBuffer()">
-                    <i class="fas fa-shield-alt"></i> Create Smooth Buffer
+                <button class="btn-buffer" id="btn-create-buffer" onclick="toggleBufferMode()">
+                    <i class="fas fa-layer-group"></i> Create 30s Buffer
                 </button>
 
                 <div class="controls">
+                    <button class="btn-side" id="btn-star-main" onclick="toggleStarMain()">
+                        <i class="far fa-star"></i>
+                    </button>
                     <button class="btn-main" id="btn-play-main" onclick="togglePlay()">
-                        <i class="fas fa-play" id="play-icon-main"></i>
+                        <i class="fas fa-play" id="play-icon-main" style="margin-left: 5px;"></i>
+                    </button>
+                    <button class="btn-side" onclick="playRandomStation()">
+                        <i class="fas fa-dice"></i>
                     </button>
                 </div>
 
                 <div class="sleep-timer">
                     <i class="fas fa-moon"></i>
                     <select id="sleep-timer-select">
-                        <option value="0">Timer Off</option>
+                        <option value="0">Sleep Timer Off</option>
                         <option value="15">15 Minutes</option>
                         <option value="30">30 Minutes</option>
+                        <option value="45">45 Minutes</option>
                         <option value="60">1 Hour</option>
                     </select>
                 </div>
@@ -204,14 +259,19 @@
 
         <!-- Stars Tab -->
         <div class="tab-pane" id="tab-stars">
-            <h2 style="margin-bottom: 20px; font-weight: 600;">Favorites</h2>
+            <h2 style="margin-bottom: 20px; font-weight: 700; font-size: 1.5rem;">Starred</h2>
             <div class="station-list" id="stars-list"></div>
         </div>
 
         <!-- Explore Tab -->
         <div class="tab-pane" id="tab-search">
             <input type="text" class="search-bar" id="search-input" placeholder="Search Malayalam stations...">
-            <div class="station-list" id="explore-list"></div>
+            <div class="station-list" id="explore-list">
+                <div style="text-align:center; opacity: 0.5; margin-top: 40px;">
+                    <i class="fas fa-satellite-dish fa-2x fa-beat" style="margin-bottom: 10px;"></i>
+                    <p>Syncing Frequencies...</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -240,97 +300,103 @@
         </div>
     </div>
 
-    <!-- Hidden Core Hardware Engines -->
-    <video id="core-player" style="display:none;" playsinline crossorigin="anonymous"></video>
-    <audio id="wakelock-audio" loop style="display:none;" src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU5LjI3LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIAD+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+"></audio>
+    <!-- Audio Engines -->
+    <audio id="core-audio" crossorigin="anonymous"></audio>
+    <!-- Hardware CPU Wakelock (Silent Loop) -->
+    <audio id="wakelock-audio" loop src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU5LjI3LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIAD+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+/v7+"></audio>
 
     <script>
+        /**
+         * 1. INJECT SERVICE WORKER FOR AGGRESSIVE BUFFERING
+         * This intercepts the audio stream, bursts ~500KB into RAM, 
+         * and seamlessly creates an impenetrable playback buffer.
+         */
+        const swCode = `
+            self.addEventListener('install', e => self.skipWaiting());
+            self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+
+            self.addEventListener('fetch', event => {
+                const url = new URL(event.request.url);
+                if (url.pathname === '/relaybox-stream') {
+                    const targetUrl = url.searchParams.get('url');
+                    if (targetUrl) {
+                        event.respondWith(handleStream(targetUrl));
+                    }
+                }
+            });
+
+            async function handleStream(targetUrl) {
+                try {
+                    const response = await fetch(targetUrl);
+                    const reader = response.body.getReader();
+                    const buffer = [];
+                    let bytesLoaded = 0;
+                    const targetBytes = 500000; // Force ~500KB cache (approx 30s)
+
+                    // Aggressive Pre-fetch Phase
+                    while (bytesLoaded < targetBytes) {
+                        const {done, value} = await reader.read();
+                        if (done) break;
+                        buffer.push(value);
+                        bytesLoaded += value.length;
+                    }
+
+                    // Seamless Hand-off Phase
+                    const stream = new ReadableStream({
+                        async start(controller) {
+                            for (const chunk of buffer) {
+                                controller.enqueue(chunk);
+                            }
+                            while (true) {
+                                const {done, value} = await reader.read();
+                                if (done) break;
+                                controller.enqueue(value);
+                            }
+                            controller.close();
+                        }
+                    });
+
+                    return new Response(stream, {
+                        headers: { 'Content-Type': response.headers.get('Content-Type') || 'audio/mpeg' }
+                    });
+                } catch (e) {
+                    return fetch(targetUrl); // Fallback
+                }
+            }
+        `;
+        
+        const swBlob = new Blob([swCode], {type: 'application/javascript'});
+        const swUrl = URL.createObjectURL(swBlob);
+        
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register(swUrl).catch(err => console.warn("SW Registration requires HTTPS:", err));
+        }
+
+        /**
+         * 2. CORE APPLICATION LOGIC
+         */
         let stations = [];
-        let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
-        let artCache = JSON.parse(localStorage.getItem('artCache')) || {};
+        let favorites = JSON.parse(localStorage.getItem('rb_favorites')) || [];
+        let artCache = JSON.parse(localStorage.getItem('rb_artCache')) || {};
         
         let currentStation = null;
         let isBufferMode = false;
         let sleepTimerId = null;
-        let networkPingInterval = null;
 
-        const player = document.getElementById('core-player');
+        const player = document.getElementById('core-audio');
         const wakeLock = document.getElementById('wakelock-audio');
 
-        // --- Doze Bypass Engine ---
-        function activateAntiDozeBuffer() {
-            if (!currentStation) {
-                alert("Please select a station from Explore first.");
-                switchTab('search');
-                return;
-            }
-            
-            const btn = document.getElementById('btn-create-buffer');
-            
-            if (isBufferMode) {
-                // Turn off buffer
-                isBufferMode = false;
-                btn.classList.remove('active');
-                btn.innerHTML = '<i class="fas fa-shield-alt"></i> Create Smooth Buffer';
-                wakeLock.pause();
-                clearInterval(networkPingInterval);
-                updateSub("Live Stream (Unbuffered)");
-            } else {
-                // Turn on buffer
-                isBufferMode = true;
-                btn.classList.add('active');
-                btn.innerHTML = '<i class="fas fa-check-circle"></i> Buffer Active';
-                
-                updateSub("Allocating Memory & Locking CPU...");
-                
-                // 1. Silent CPU Lock
-                wakeLock.play().catch(e => console.warn("Wakelock restricted until interaction"));
-                
-                // 2. Network Wake Lock Ping (Prevents Android Wi-Fi Sleep)
-                clearInterval(networkPingInterval);
-                networkPingInterval = setInterval(() => {
-                    fetch('https://www.google.com/favicon.ico?' + Date.now(), { mode: 'no-cors' }).catch(()=>{});
-                }, 15000);
+        // Setup PWA Manifest
+        const manifest = {
+            name: "RelayBox FM", short_name: "RelayBox", display: "standalone",
+            background_color: "#0f0c29", theme_color: "#0f0c29",
+            icons: [{ src: "https://placehold.co/512x512/ec4899/ffffff?text=RB", sizes: "512x512", type: "image/png" }]
+        };
+        document.getElementById('manifest-link').href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }));
 
-                // 3. Force Hardware Reload to build native chunk
-                player.pause();
-                player.load();
-                
-                setTimeout(() => {
-                    updateSub("Playing from Buffer");
-                    player.play();
-                }, 3000); // Give the native engine 3 seconds to aggressively pre-fetch a chunk
-            }
-        }
-
-        // --- Smart Artwork Fetcher (iTunes Tool) ---
-        async function getArtwork(station) {
-            // If already cached from iTunes, use it
-            if (artCache[station.stationuuid]) return artCache[station.stationuuid];
-            
-            // If radio-browser has a valid link, use it
-            if (station.favicon && station.favicon.startsWith('http')) return station.favicon;
-            
-            // Otherwise, dynamically query iTunes for an exact match
-            try {
-                const cleanName = station.name.replace(/radio|fm|online|live/gi, '').trim();
-                const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(cleanName)}&entity=podcast,album&limit=1`);
-                const data = await res.json();
-                if (data.results && data.results.length > 0) {
-                    const hqImage = data.results[0].artworkUrl100.replace('100x100', '600x600');
-                    artCache[station.stationuuid] = hqImage;
-                    localStorage.setItem('artCache', JSON.stringify(artCache));
-                    return hqImage;
-                }
-            } catch(e) { console.warn("iTunes fetch failed"); }
-            
-            // Absolute fallback
-            return `https://ui-avatars.com/api/?name=${encodeURIComponent(station.name.substring(0,2))}&background=24243e&color=fff&size=260`;
-        }
-
-        // --- Data & Initialization ---
+        // Init
         async function init() {
-            const cached = localStorage.getItem('malayalam_stations');
+            const cached = localStorage.getItem('rb_stations');
             if (cached) {
                 stations = JSON.parse(cached);
                 renderLists(stations);
@@ -340,20 +406,40 @@
                 const data = await res.json();
                 if(data.length > 0) {
                     stations = data;
-                    localStorage.setItem('malayalam_stations', JSON.stringify(stations));
+                    localStorage.setItem('rb_stations', JSON.stringify(stations));
                     renderLists(stations);
                 }
             } catch (err) {}
         }
 
-        // --- UI Rendering ---
+        // Smart Artwork Fetcher (iTunes)
+        async function getArtwork(station) {
+            if (artCache[station.stationuuid]) return artCache[station.stationuuid];
+            if (station.favicon && station.favicon.startsWith('http')) return station.favicon;
+            
+            try {
+                const cleanName = station.name.replace(/radio|fm|online|live/gi, '').trim();
+                const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(cleanName)}&entity=podcast,album&limit=1`);
+                const data = await res.json();
+                if (data.results && data.results.length > 0) {
+                    const hqImage = data.results[0].artworkUrl100.replace('100x100', '600x600');
+                    artCache[station.stationuuid] = hqImage;
+                    localStorage.setItem('rb_artCache', JSON.stringify(artCache));
+                    return hqImage;
+                }
+            } catch(e) {}
+            
+            return `https://ui-avatars.com/api/?name=${encodeURIComponent(station.name.substring(0,2))}&background=24243e&color=fff&size=260`;
+        }
+
+        // Rendering
         async function renderLists(data) {
             const expList = document.getElementById('explore-list');
             const starList = document.getElementById('stars-list');
             expList.innerHTML = ''; starList.innerHTML = '';
             
             const favData = stations.filter(s => favorites.includes(s.stationuuid));
-            if(favData.length === 0) starList.innerHTML = '<p style="text-align:center; color:var(--text-muted); margin-top: 20px;">Star stations in Explore to see them here.</p>';
+            if(favData.length === 0) starList.innerHTML = '<div style="text-align:center; opacity:0.5; padding: 20px;"><i class="far fa-star fa-2x mb-2"></i><br>No favorites yet</div>';
 
             for (const st of data) expList.appendChild(await buildCard(st));
             for (const st of favData) starList.appendChild(await buildCard(st));
@@ -361,10 +447,11 @@
 
         async function buildCard(station) {
             const isFav = favorites.includes(station.stationuuid);
+            const isPlaying = currentStation && currentStation.stationuuid === station.stationuuid;
             const card = document.createElement('div');
-            card.className = 'station-card';
+            card.className = `station-card ${isPlaying ? 'playing' : ''}`;
+            card.id = `card-${station.stationuuid}`;
             
-            // Quick local render to prevent list lag, then async update image
             const fallbackImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(station.name.substring(0,2))}&background=24243e&color=fff`;
             
             card.innerHTML = `
@@ -373,23 +460,45 @@
                     <div class="st-name">${station.name}</div>
                     <div class="st-tags">${station.tags.split(',').slice(0,2).join(' • ')}</div>
                 </div>
-                <button class="btn-star ${isFav ? 'active' : ''}" onclick='toggleStar("${station.stationuuid}", this)'>
-                    <i class="fas fa-star"></i>
+                <button class="btn-side ${isFav ? 'active' : ''}" onclick='toggleStar("${station.stationuuid}", this)' style="font-size: 1.4rem; padding: 10px;">
+                    <i class="${isFav ? 'fas' : 'far'} fa-star"></i>
                 </button>
             `;
             
-            // Async load real artwork
             getArtwork(station).then(src => {
-                document.getElementById(`img-${station.stationuuid}`).src = src;
+                const img = document.getElementById(`img-${station.stationuuid}`);
+                if (img) img.src = src;
             });
             
             return card;
         }
 
-        // --- Player Logic ---
+        // Playback Logic
+        function toggleBufferMode() {
+            if (!currentStation) return;
+            isBufferMode = !isBufferMode;
+            
+            const btn = document.getElementById('btn-create-buffer');
+            if (isBufferMode) {
+                btn.classList.add('active');
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> 30s Buffer Active';
+            } else {
+                btn.classList.remove('active');
+                btn.innerHTML = '<i class="fas fa-layer-group"></i> Create 30s Buffer';
+            }
+            
+            // Reload stream with new setting
+            playStation(currentStation.stationuuid);
+        }
+
         async function playStation(uuid) {
             currentStation = stations.find(s => s.stationuuid === uuid);
             if(!currentStation) return;
+
+            // Update Active Card Styling
+            document.querySelectorAll('.station-card').forEach(c => c.classList.remove('playing'));
+            const cards = document.querySelectorAll(`#card-${uuid}`);
+            cards.forEach(c => c.classList.add('playing'));
 
             const art = await getArtwork(currentStation);
             document.getElementById('main-artwork').src = art;
@@ -397,12 +506,18 @@
             document.getElementById('main-title').textContent = currentStation.name;
             document.getElementById('mini-title').textContent = currentStation.name;
             
-            updateSub("Connecting Stream...");
-            
-            player.src = currentStation.url_resolved;
-            player.play();
+            updateMainStarButton();
 
-            if (isBufferMode) activateAntiDozeBuffer(); // Re-apply locks if buffer mode was on
+            if (isBufferMode && navigator.serviceWorker.controller) {
+                updateSub("Caching 30s Segment...");
+                player.src = `/relaybox-stream?url=${encodeURIComponent(currentStation.url_resolved)}`;
+            } else {
+                updateSub("Connecting...");
+                player.src = currentStation.url_resolved;
+            }
+
+            player.play();
+            wakeLock.play().catch(()=>{}); // Hardware CPU Lock
 
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({
@@ -415,14 +530,17 @@
             }
         }
 
+        function playRandomStation() {
+            if(stations.length === 0) return;
+            const random = stations[Math.floor(Math.random() * stations.length)];
+            playStation(random.stationuuid);
+        }
+
         function togglePlay() {
-            if (!currentStation) {
-                switchTab('search');
-                return;
-            }
+            if (!currentStation) { switchTab('search'); return; }
             if (player.paused) {
                 player.play();
-                if(isBufferMode) wakeLock.play();
+                wakeLock.play().catch(()=>{});
             } else {
                 player.pause();
                 wakeLock.pause();
@@ -434,63 +552,99 @@
             document.getElementById('mini-sub').textContent = text;
         }
 
-        // --- Event Listeners ---
+        // Live Buffer Progress Bar Sync
+        player.addEventListener('timeupdate', () => {
+            const barGrey = document.getElementById('bar-grey');
+            const barPink = document.getElementById('bar-pink');
+            
+            if (player.buffered.length > 0) {
+                const bufferedEnd = player.buffered.end(player.buffered.length - 1);
+                const current = player.currentTime;
+
+                // Grey bar represents total downloaded buffer (Always 100% of visible window)
+                // Pink bar represents current playback position relative to that buffer.
+                // If bufferedEnd is far ahead, Pink bar is lagging behind (showing the safety net).
+                barGrey.style.width = '100%';
+                
+                let pinkPercent = (current / bufferedEnd) * 100;
+                // Cap it just in case
+                if(pinkPercent > 100) pinkPercent = 100;
+                
+                barPink.style.width = `${pinkPercent}%`;
+            } else {
+                barGrey.style.width = '0%';
+                barPink.style.width = '0%';
+            }
+        });
+
         player.addEventListener('playing', () => {
             document.getElementById('play-icon-main').className = 'fas fa-pause';
             document.getElementById('play-icon-mini').className = 'fas fa-pause';
+            document.getElementById('play-icon-main').style.marginLeft = '0';
             document.querySelectorAll('.spin').forEach(el => el.classList.remove('paused'));
             document.getElementById('art-container').style.transform = 'scale(1.05)';
-            if(!isBufferMode) updateSub("Playing Live");
+            
+            if(!isBufferMode) updateSub("Live Broadcast");
+            else updateSub("Buffered Playback");
         });
 
         player.addEventListener('pause', () => {
             document.getElementById('play-icon-main').className = 'fas fa-play';
             document.getElementById('play-icon-mini').className = 'fas fa-play';
+            document.getElementById('play-icon-main').style.marginLeft = '5px';
             document.querySelectorAll('.spin').forEach(el => el.classList.add('paused'));
             document.getElementById('art-container').style.transform = 'scale(1)';
             updateSub("Paused");
         });
-        
-        // Smart Reconnector to hide network jitters
-        player.addEventListener('waiting', () => {
-            updateSub("Recovering...");
-            if (isBufferMode) {
-                setTimeout(() => { if(player.readyState < 3) { player.load(); player.play(); } }, 4000);
-            }
-        });
 
-        // --- Stars & Search ---
+        // Stars & Search
         function toggleStar(uuid, btn) {
             if (favorites.includes(uuid)) {
                 favorites = favorites.filter(id => id !== uuid);
-                btn.classList.remove('active');
+                if(btn) { btn.classList.remove('active'); btn.innerHTML = '<i class="far fa-star"></i>'; }
             } else {
                 favorites.push(uuid);
-                btn.classList.add('active');
-                
-                // Animation popup
-                btn.style.transform = 'scale(1.4)';
-                setTimeout(() => btn.style.transform = 'scale(1)', 200);
+                if(btn) { 
+                    btn.classList.add('active'); btn.innerHTML = '<i class="fas fa-star"></i>'; 
+                    btn.style.transform = 'scale(1.3)'; setTimeout(() => btn.style.transform = 'scale(1)', 200);
+                }
             }
-            localStorage.setItem('favorites', JSON.stringify(favorites));
+            localStorage.setItem('rb_favorites', JSON.stringify(favorites));
+            if(currentStation && currentStation.stationuuid === uuid) updateMainStarButton();
             
             // Re-render stars list silently
             const starList = document.getElementById('stars-list');
             starList.innerHTML = '';
             const favData = stations.filter(s => favorites.includes(s.stationuuid));
-            if(favData.length === 0) starList.innerHTML = '<p style="text-align:center; color:var(--text-muted); margin-top: 20px;">Star stations in Explore to see them here.</p>';
+            if(favData.length === 0) starList.innerHTML = '<div style="text-align:center; opacity:0.5; padding: 20px;"><i class="far fa-star fa-2x mb-2"></i><br>No favorites yet</div>';
             favData.forEach(async st => starList.appendChild(await buildCard(st)));
+        }
+
+        function toggleStarMain() {
+            if(currentStation) toggleStar(currentStation.stationuuid, null);
+        }
+
+        function updateMainStarButton() {
+            const btn = document.getElementById('btn-star-main');
+            if(!currentStation) return;
+            if(favorites.includes(currentStation.stationuuid)) {
+                btn.classList.add('active');
+                btn.innerHTML = '<i class="fas fa-star"></i>';
+            } else {
+                btn.classList.remove('active');
+                btn.innerHTML = '<i class="far fa-star"></i>';
+            }
         }
 
         document.getElementById('search-input').addEventListener('input', (e) => {
             const q = e.target.value.toLowerCase();
-            const filtered = stations.filter(s => s.name.toLowerCase().includes(q) || s.tags.toLowerCase().includes(q));
+            const filtered = stations.filter(s => s.name.toLowerCase().includes(q) || (s.tags && s.tags.toLowerCase().includes(q)));
             const list = document.getElementById('explore-list');
             list.innerHTML = '';
             filtered.forEach(async st => list.appendChild(await buildCard(st)));
         });
 
-        // --- Animations & Tabs ---
+        // Tabs
         function switchTab(tabId) {
             document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -506,7 +660,7 @@
             }
         }
 
-        // --- Sleep Timer ---
+        // Sleep Timer
         document.getElementById('sleep-timer-select').addEventListener('change', (e) => {
             clearTimeout(sleepTimerId);
             const mins = parseInt(e.target.value);

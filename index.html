@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>RelayBox FM</title>
     
-    <!-- Dynamic Manifest Link -->
     <link id="manifest-link" rel="manifest" href="">
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -32,7 +31,6 @@
         }
     </script>
     <style>
-        /* Hide scrollbar for a more app-like feel */
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
@@ -41,7 +39,7 @@
             -webkit-tap-highlight-color: transparent;
             user-select: none;
             font-family: 'Outfit', sans-serif;
-            overflow: hidden;
+            overflow: hidden; /* Prevent body scroll, handle scroll in tabs */
         }
 
         /* Animated Gradient Mesh Background */
@@ -64,28 +62,11 @@
         }
         
         /* Glassmorphism */
-        .glass {
-            background: rgba(17, 24, 39, 0.4);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-        }
-
-        .glass-btn {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-        
-        .glass-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .glass-btn:active {
-            transform: translateY(0);
+        .glass-header {
+            background: rgba(17, 24, 39, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         /* Vinyl Record Spin */
@@ -122,109 +103,113 @@
             animation-play-state: paused;
         }
 
-        /* Pulse animation for buffering */
-        @keyframes pulse-ring {
-            0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(236, 72, 153, 0); }
-            100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
-        }
-        .buffering-indicator {
-            animation: pulse-ring 1.5s infinite;
-        }
-
         /* Smooth fade in */
-        .fade-in {
-            animation: fadeIn 0.5s ease-in-out forwards;
-        }
+        .fade-in { animation: fadeIn 0.3s ease-in-out forwards; }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
+        
+        /* Tab Navigation Active State */
+        .tab-btn { transition: all 0.3s ease; }
+        .tab-active {
+            color: #fff;
+            filter: drop-shadow(0 0 8px rgba(236,72,153,0.8));
+            transform: scale(1.1);
+        }
+        .tab-inactive { color: rgba(255,255,255,0.4); }
     </style>
 </head>
 <body class="text-white">
 
     <div class="bg-mesh"></div>
 
-    <div class="h-screen w-screen flex flex-col relative z-10 p-4 sm:p-6 max-w-2xl mx-auto">
+    <!-- Main App Container -->
+    <div class="h-screen w-full max-w-md mx-auto flex flex-col relative z-10 bg-black/20 backdrop-blur-sm shadow-2xl">
         
-        <!-- Header -->
-        <header class="flex justify-between items-center mb-6 shrink-0 fade-in">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-lg">
-                    <i class="fa-solid fa-broadcast-tower text-white"></i>
-                </div>
-                <div>
-                    <h1 class="font-extrabold text-2xl leading-none tracking-tight">RelayBox<span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">FM</span></h1>
-                </div>
-            </div>
-            <button id="install-btn" class="hidden glass-btn text-white rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wider">
-                Install
-            </button>
+        <!-- Header / Navigation -->
+        <header class="glass-header flex justify-between items-center p-5 shrink-0 z-20">
+            <h1 class="font-extrabold text-2xl tracking-tight">RelayBox<span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">FM</span></h1>
+            <nav class="flex gap-6 text-2xl items-center">
+                <button onclick="app.switchTab('player')" id="nav-player" class="tab-btn tab-active"><i class="fa-solid fa-music"></i></button>
+                <button onclick="app.switchTab('favorites')" id="nav-favorites" class="tab-btn tab-inactive"><i class="fa-solid fa-star"></i></button>
+                <button onclick="app.switchTab('explore')" id="nav-explore" class="tab-btn tab-inactive"><i class="fa-solid fa-magnifying-glass"></i></button>
+            </nav>
         </header>
 
-        <!-- Main Player Stage -->
-        <section class="glass rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center mb-6 shrink-0 shadow-2xl relative overflow-hidden fade-in" style="animation-delay: 0.1s;">
-            
-            <!-- Background Blur image (dynamic) -->
-            <div id="player-bg-blur" class="absolute inset-0 bg-cover bg-center opacity-20 filter blur-3xl mix-blend-overlay transition-all duration-1000"></div>
+        <!-- Dynamic Background Blur for Player -->
+        <div id="player-bg-blur" class="absolute inset-0 bg-cover bg-center opacity-10 filter blur-3xl mix-blend-overlay transition-all duration-1000 pointer-events-none z-0"></div>
 
-            <div id="player-stage" class="relative z-10 flex flex-col items-center w-full">
+        <!-- Main Content Area (Scrollable) -->
+        <main class="flex-1 relative overflow-hidden z-10">
+            
+            <!-- VIEW: PLAYER -->
+            <div id="view-player" class="absolute inset-0 flex flex-col items-center justify-center p-6 fade-in overflow-y-auto no-scrollbar">
                 
-                <!-- Circular Thumbnail (Vinyl) -->
-                <div class="relative w-40 h-40 sm:w-56 sm:h-56 mb-6">
+                <div class="relative w-56 h-56 sm:w-64 sm:h-64 mb-8" id="player-stage">
                     <img id="player-thumb" src="https://placehold.co/400x400/1e1b4b/ffffff?text=FM" alt="Radio" class="w-full h-full object-cover vinyl shadow-2xl">
                     
-                    <!-- Buffering Overlay -->
-                    <div id="player-buffering" class="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center hidden z-20 backdrop-blur-sm">
-                        <i class="fa-solid fa-circle-notch text-primary text-3xl animate-spin"></i>
+                    <!-- 30s Buffering Overlay -->
+                    <div id="buffer-overlay" class="absolute inset-0 bg-black/80 rounded-full flex flex-col items-center justify-center hidden z-20 backdrop-blur-sm">
+                        <span id="buffer-count" class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary mb-1">30</span>
+                        <span class="text-[10px] text-white/70 uppercase tracking-[0.2em]">Buffering</span>
+                        <!-- Spinner Ring -->
+                        <div class="absolute inset-2 border-4 border-transparent border-t-primary border-b-secondary rounded-full animate-spin opacity-50 pointer-events-none"></div>
                     </div>
                 </div>
 
-                <!-- Station Info -->
-                <div class="text-center w-full mb-8">
-                    <h2 id="player-name" class="text-2xl sm:text-3xl font-bold truncate mb-1 text-white drop-shadow-md">Connecting...</h2>
-                    <p id="player-status" class="text-sm font-medium text-pink-400 tracking-wide uppercase">Initializing Data</p>
+                <div class="text-center w-full mb-10 px-4">
+                    <h2 id="player-name" class="text-3xl font-bold truncate mb-2 drop-shadow-md">Select a Station</h2>
+                    <!-- Emulated Now Playing / Genre Info -->
+                    <p id="player-now-playing" class="text-sm font-medium text-pink-400 tracking-wide uppercase truncate w-full h-5">Explore to start listening</p>
                 </div>
 
-                <!-- Controls -->
-                <div class="flex items-center justify-center gap-6 sm:gap-8 w-full">
-                    
-                    <!-- Random Button -->
-                    <button onclick="app.playRandom()" class="glass-btn w-12 h-12 rounded-full flex items-center justify-center text-gray-200 hover:text-white group relative">
-                        <i class="fa-solid fa-dice text-xl transition-transform group-hover:rotate-180 duration-500"></i>
+                <div class="flex items-center justify-center gap-10 w-full">
+                    <!-- Favorite Button -->
+                    <button onclick="app.toggleFavorite()" id="btn-fav" class="text-3xl text-gray-400 hover:scale-110 transition-transform">
+                        <i class="fa-regular fa-star" id="icon-fav"></i>
                     </button>
 
                     <!-- Play/Pause Button -->
-                    <button onclick="app.togglePlay()" id="btn-play" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-primary to-secondary text-white flex items-center justify-center shadow-[0_0_30px_rgba(236,72,153,0.5)] hover:shadow-[0_0_40px_rgba(236,72,153,0.8)] transition-all transform active:scale-95 border-2 border-white/20">
-                        <i class="fa-solid fa-play text-3xl sm:text-4xl ml-2 drop-shadow-md" id="icon-play"></i>
+                    <button onclick="app.togglePlay()" id="btn-play" class="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-secondary text-white flex items-center justify-center shadow-[0_0_30px_rgba(236,72,153,0.4)] active:scale-95 transition-transform border-2 border-white/20">
+                        <i class="fa-solid fa-play text-4xl ml-2 drop-shadow-md" id="icon-play"></i>
                     </button>
 
-                    <!-- Add to favorites (visual only for balance, or could be functional) -->
-                    <button onclick="app.playRandom()" class="glass-btn w-12 h-12 rounded-full flex items-center justify-center text-gray-200 hover:text-white group">
-                        <i class="fa-solid fa-shuffle text-lg transition-transform group-hover:-rotate-180 duration-500"></i>
+                    <!-- Random Button -->
+                    <button onclick="app.playRandom()" class="text-3xl text-gray-400 hover:text-white hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-dice"></i>
                     </button>
-
                 </div>
             </div>
-        </section>
 
-        <!-- Station Grid List -->
-        <section class="flex-1 min-h-0 glass rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col fade-in" style="animation-delay: 0.2s;">
-            <div class="flex justify-between items-center mb-4 shrink-0 px-2">
-                <h3 class="font-semibold text-lg tracking-wide">All Stations</h3>
-                <span id="station-count" class="text-xs font-bold bg-white/10 px-3 py-1 rounded-full">0</span>
-            </div>
-            
-            <div id="stations-grid" class="flex-1 overflow-y-auto no-scrollbar grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-y-6 gap-x-4 content-start pb-4">
-                <!-- Loader -->
-                <div class="col-span-full flex flex-col items-center justify-center py-10 opacity-70">
-                    <i class="fa-solid fa-satellite-dish text-3xl animate-pulse mb-3"></i>
-                    <p class="text-sm">Scanning Frequencies...</p>
+            <!-- VIEW: FAVORITES -->
+            <div id="view-favorites" class="absolute inset-0 hidden flex-col fade-in bg-black/40">
+                <div class="p-5 border-b border-white/10 shrink-0 bg-black/20">
+                    <h2 class="text-xl font-bold"><i class="fa-solid fa-star text-yellow-400 mr-2"></i> Your Favorites</h2>
+                </div>
+                <div id="favorites-list" class="flex-1 overflow-y-auto no-scrollbar p-2">
+                    <!-- Fav list rendered here -->
                 </div>
             </div>
-        </section>
 
+            <!-- VIEW: EXPLORE -->
+            <div id="view-explore" class="absolute inset-0 hidden flex-col fade-in bg-black/40">
+                <div class="p-4 border-b border-white/10 shrink-0 bg-black/20">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-white/50"></i>
+                        <input type="text" id="search-input" onkeyup="app.filterStations()" placeholder="Search Malayalam radios..." class="w-full bg-white/10 border border-white/20 rounded-full py-3 pl-12 pr-4 text-white placeholder-white/50 focus:outline-none focus:border-primary transition-colors">
+                    </div>
+                </div>
+                <div id="explore-list" class="flex-1 overflow-y-auto no-scrollbar p-2">
+                    <!-- Explore list rendered here -->
+                    <div class="flex flex-col items-center justify-center py-20 opacity-70">
+                        <i class="fa-solid fa-satellite-dish text-4xl animate-pulse mb-4 text-primary"></i>
+                        <p class="text-sm tracking-wide">Syncing Frequencies...</p>
+                    </div>
+                </div>
+            </div>
+
+        </main>
     </div>
 
     <!-- Hidden Audio Engine -->
@@ -232,7 +217,7 @@
 
     <script>
         /**
-         * PWA & Service Worker Generation
+         * PWA & Service Worker
          */
         function setupPWA() {
             const manifest = {
@@ -243,181 +228,299 @@
                 display: "standalone",
                 background_color: "#0f172a",
                 theme_color: "#0f172a",
-                icons: [
-                    { src: "https://placehold.co/192x192/ec4899/ffffff?text=RB", sizes: "192x192", type: "image/png" },
-                    { src: "https://placehold.co/512x512/ec4899/ffffff?text=RB", sizes: "512x512", type: "image/png" }
-                ]
+                icons: [{ src: "https://placehold.co/512x512/ec4899/ffffff?text=RB", sizes: "512x512", type: "image/png" }]
             };
-            const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-            document.getElementById('manifest-link').href = URL.createObjectURL(manifestBlob);
-
+            document.getElementById('manifest-link').href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }));
+            
             const swCode = `
                 self.addEventListener('install', (e) => self.skipWaiting());
                 self.addEventListener('activate', (e) => self.clients.claim());
-                self.addEventListener('fetch', (e) => {
-                    e.respondWith(fetch(e.request).catch(() => new Response('Offline')));
-                });
+                self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => new Response('Offline'))));
             `;
-            const swBlob = new Blob([swCode], { type: 'application/javascript' });
-            
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(err => console.error(err));
+                navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'application/javascript' })));
             }
-
-            let deferredPrompt;
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                const installBtn = document.getElementById('install-btn');
-                installBtn.classList.remove('hidden');
-                installBtn.addEventListener('click', async () => {
-                    installBtn.classList.add('hidden');
-                    deferredPrompt.prompt();
-                    deferredPrompt = null;
-                });
-            });
         }
 
         /**
-         * Application Logic
+         * Core Application Logic
          */
         class RelayBoxApp {
             constructor() {
-                // Radio Browser API for up to 500 Malayalam stations
-                this.apiUrl = 'https://de1.api.radio-browser.info/json/stations/search?language=malayalam&hidebroken=true&limit=500&order=clickcount&reverse=true';
-                this.stations = [];
+                // State
+                this.stations = JSON.parse(localStorage.getItem('rb_stations_cache')) || [];
+                this.favorites = JSON.parse(localStorage.getItem('rb_favorites')) || [];
                 this.currentStation = null;
                 this.isPlaying = false;
+                
+                // Buffer Engine
                 this.isBuffering = false;
-                this.bufferTimeout = null;
-                this.bufferTargetSeconds = 3500; // 3.5 seconds deep buffer
-
-                // DOM Elements
+                this.bufferInterval = null;
+                this.bufferTargetSeconds = 30; // Protect against Screen-Off Doze
+                
+                // DOM Cache
                 this.audio = document.getElementById('audio-engine');
                 this.playerStage = document.getElementById('player-stage');
-                this.playerThumb = document.getElementById('player-thumb');
-                this.playerBgBlur = document.getElementById('player-bg-blur');
-                this.playerName = document.getElementById('player-name');
-                this.playerStatus = document.getElementById('player-status');
-                this.playerBuffering = document.getElementById('player-buffering');
-                this.btnPlay = document.getElementById('btn-play');
                 this.iconPlay = document.getElementById('icon-play');
-                this.stationsGrid = document.getElementById('stations-grid');
-                this.stationCount = document.getElementById('station-count');
-
+                this.iconFav = document.getElementById('icon-fav');
+                
                 this.init();
             }
 
             async init() {
                 this.setupAudioListeners();
-                await this.fetchStations();
                 
+                // If we have cached stations, render immediately. Fetch in background.
                 if (this.stations.length > 0) {
-                    this.playRandom();
+                    this.renderExploreList(this.stations);
+                    this.fetchStations(true); // silent background update
                 } else {
-                    this.playerName.textContent = "No Stations Found";
-                    this.playerStatus.textContent = "Error";
+                    await this.fetchStations(false);
+                }
+
+                this.renderFavoritesList();
+
+                // Auto-play random if nothing is playing on fresh load
+                if (this.stations.length > 0) {
+                    this.setStation(this.stations[Math.floor(Math.random() * this.stations.length)], false);
                 }
             }
 
-            async fetchStations() {
+            async fetchStations(silent = false) {
                 try {
-                    const res = await fetch(this.apiUrl);
+                    const res = await fetch('https://de1.api.radio-browser.info/json/stations/search?language=malayalam&hidebroken=true&limit=500&order=clickcount&reverse=true');
                     const data = await res.json();
-                    // Filter out invalid URLs
                     this.stations = data.filter(s => s.url_resolved && s.codec !== 'UNKNOWN');
-                    this.stationCount.textContent = this.stations.length;
-                    this.renderStations();
+                    localStorage.setItem('rb_stations_cache', JSON.stringify(this.stations));
+                    
+                    if (!silent) this.renderExploreList(this.stations);
                 } catch (error) {
                     console.error("API Error:", error);
-                    this.stationsGrid.innerHTML = `<div class="col-span-full text-center text-red-400 py-10">Network Error. Please refresh.</div>`;
+                    if (!silent && this.stations.length === 0) {
+                        document.getElementById('explore-list').innerHTML = `<div class="text-center text-red-400 py-10">Network Error. Check connection.</div>`;
+                    }
                 }
             }
 
-            renderStations() {
-                if (this.stations.length === 0) return;
+            /**
+             * Artwork Fetcher Logic
+             * 1. Favicon
+             * 2. Clearbit Logo via Homepage Hostname
+             * 3. UI-Avatars Fallback
+             */
+            getArtwork(station) {
+                if (station.favicon && station.favicon.trim() !== '') return station.favicon;
+                if (station.homepage && station.homepage.trim() !== '') {
+                    try {
+                        const url = new URL(station.homepage);
+                        return `https://logo.clearbit.com/${url.hostname}`;
+                    } catch(e) {}
+                }
+                return this.getAvatarFallback(station.name);
+            }
 
-                this.stationsGrid.innerHTML = this.stations.map((s, index) => {
-                    const thumb = s.favicon || `https://placehold.co/200x200/1e1b4b/ec4899?text=${s.name.substring(0,2).toUpperCase()}`;
-                    const safeName = s.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                    
-                    return `
-                        <div class="flex flex-col items-center cursor-pointer group" onclick="app.playStationByIndex(${index})">
-                            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-transparent group-hover:border-primary transition-all duration-300 shadow-lg mb-2 relative">
-                                <img src="${thumb}" onerror="this.src='https://placehold.co/200x200/1e1b4b/ec4899?text=FM'" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" loading="lazy">
-                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <i class="fa-solid fa-play text-white text-lg"></i>
-                                </div>
-                            </div>
-                            <h4 class="text-[10px] sm:text-xs text-center font-medium text-gray-300 group-hover:text-white w-full truncate px-1">${s.name}</h4>
+            getAvatarFallback(name) {
+                return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'FM')}&background=random&color=fff&size=256`;
+            }
+
+            /**
+             * Tab Navigation
+             */
+            switchTab(tabId) {
+                ['player', 'favorites', 'explore'].forEach(id => {
+                    document.getElementById(`view-${id}`).classList.add('hidden');
+                    const navBtn = document.getElementById(`nav-${id}`);
+                    navBtn.classList.remove('tab-active');
+                    navBtn.classList.add('tab-inactive');
+                });
+                
+                document.getElementById(`view-${tabId}`).classList.remove('hidden');
+                const activeNav = document.getElementById(`nav-${tabId}`);
+                activeNav.classList.remove('tab-inactive');
+                activeNav.classList.add('tab-active');
+            }
+
+            /**
+             * List Renderers
+             */
+            createListItem(station) {
+                const thumb = this.getArtwork(station);
+                const tags = station.tags ? station.tags.split(',').slice(0, 2).join(', ') : 'Malayalam Radio';
+                // Escape single quotes for inline JS
+                const safeStationJSON = JSON.stringify(station).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                
+                return `
+                    <div class="flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5" onclick="app.playStationFromList('${station.stationuuid}')">
+                        <img src="${thumb}" onerror="this.onerror=null; this.src='${this.getAvatarFallback(station.name)}';" class="w-14 h-14 rounded-xl object-cover shadow-md bg-black/20">
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-semibold text-white truncate text-base">${station.name}</h4>
+                            <p class="text-xs text-white/50 truncate capitalize">${tags}</p>
+                        </div>
+                        <button onclick="event.stopPropagation(); app.toggleFavoriteById('${station.stationuuid}')" class="w-10 h-10 flex items-center justify-center text-xl ${this.isFavorite(station.stationuuid) ? 'text-yellow-400' : 'text-gray-500 hover:text-white'} transition-colors">
+                            <i class="${this.isFavorite(station.stationuuid) ? 'fa-solid' : 'fa-regular'} fa-star"></i>
+                        </button>
+                    </div>
+                `;
+            }
+
+            renderExploreList(list) {
+                const container = document.getElementById('explore-list');
+                if (list.length === 0) {
+                    container.innerHTML = `<div class="text-center py-10 text-white/50">No stations found.</div>`;
+                    return;
+                }
+                container.innerHTML = list.map(s => this.createListItem(s)).join('');
+            }
+
+            renderFavoritesList() {
+                const container = document.getElementById('favorites-list');
+                if (this.favorites.length === 0) {
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center py-20 opacity-50">
+                            <i class="fa-regular fa-star text-5xl mb-4"></i>
+                            <p>No favorites yet.</p>
+                            <p class="text-xs mt-2">Star stations in the Explore tab.</p>
                         </div>
                     `;
-                }).join('');
+                    return;
+                }
+                container.innerHTML = this.favorites.map(s => this.createListItem(s)).join('');
+            }
+
+            filterStations() {
+                const query = document.getElementById('search-input').value.toLowerCase();
+                const filtered = this.stations.filter(s => s.name.toLowerCase().includes(query) || (s.tags && s.tags.toLowerCase().includes(query)));
+                this.renderExploreList(filtered);
+            }
+
+            /**
+             * Favorites Management
+             */
+            isFavorite(uuid) {
+                return this.favorites.some(s => s.stationuuid === uuid);
+            }
+
+            toggleFavoriteById(uuid) {
+                const station = this.stations.find(s => s.stationuuid === uuid) || this.currentStation;
+                if (!station) return;
+                
+                if (this.isFavorite(uuid)) {
+                    this.favorites = this.favorites.filter(s => s.stationuuid !== uuid);
+                } else {
+                    this.favorites.push(station);
+                }
+                
+                localStorage.setItem('rb_favorites', JSON.stringify(this.favorites));
+                this.renderFavoritesList();
+                this.renderExploreList(this.stations); // Re-render to update star icons
+                this.updatePlayerFavIcon();
+            }
+
+            toggleFavorite() {
+                if (this.currentStation) {
+                    this.toggleFavoriteById(this.currentStation.stationuuid);
+                }
+            }
+
+            updatePlayerFavIcon() {
+                if (!this.currentStation) return;
+                if (this.isFavorite(this.currentStation.stationuuid)) {
+                    this.iconFav.className = "fa-solid fa-star text-yellow-400 drop-shadow-md";
+                } else {
+                    this.iconFav.className = "fa-regular fa-star text-gray-400";
+                }
+            }
+
+            /**
+             * Playback & Buffering Engine
+             */
+            playStationFromList(uuid) {
+                const station = this.stations.find(s => s.stationuuid === uuid) || this.favorites.find(s => s.stationuuid === uuid);
+                if (station) {
+                    this.setStation(station, true);
+                    this.switchTab('player');
+                }
             }
 
             playRandom() {
                 if (this.stations.length === 0) return;
                 const randomIndex = Math.floor(Math.random() * this.stations.length);
-                this.playStationByIndex(randomIndex);
+                this.setStation(this.stations[randomIndex], true);
             }
 
-            playStationByIndex(index) {
-                const s = this.stations[index];
-                const thumb = s.favicon || `https://placehold.co/400x400/1e1b4b/ec4899?text=${s.name.substring(0,2).toUpperCase()}`;
-                
-                this.currentStation = { name: s.name, url: s.url_resolved, thumb: thumb };
-                
+            setStation(station, autoPlay = false) {
+                this.currentStation = station;
+                const thumb = this.getArtwork(station);
+                const tags = station.tags ? station.tags.split(',').slice(0, 3).join(', ') : 'Malayalam Radio';
+
                 // Update UI
-                this.playerName.textContent = s.name;
-                this.playerThumb.src = thumb;
-                this.playerBgBlur.style.backgroundImage = `url('${thumb}')`;
+                document.getElementById('player-name').textContent = station.name;
+                document.getElementById('player-now-playing').textContent = `Now Playing: ${tags}`;
                 
-                // Prepare Audio
-                this.audio.src = s.url_resolved;
+                const imgEl = document.getElementById('player-thumb');
+                imgEl.src = thumb;
+                imgEl.onerror = () => { imgEl.src = this.getAvatarFallback(station.name); };
+                
+                document.getElementById('player-bg-blur').style.backgroundImage = `url('${thumb}')`;
+                
+                this.updatePlayerFavIcon();
+                this.setupMediaSession();
+
+                // Stop any current playback/buffering
+                this.audio.pause();
+                clearInterval(this.bufferInterval);
+                this.isBuffering = false;
+                
+                // Preload to start downloading data to cache
+                this.audio.src = station.url_resolved;
                 this.audio.load();
                 
-                this.setupMediaSession();
-                this.startBufferingEngine();
+                this.updatePlayerStateUI();
+
+                if (autoPlay) {
+                    this.startBufferingEngine();
+                }
             }
 
             startBufferingEngine() {
-                // Delayed Playback to build OS-level socket buffer for Screen-Off resilience
-                clearTimeout(this.bufferTimeout);
+                clearInterval(this.bufferInterval);
                 this.isBuffering = true;
                 this.isPlaying = false;
-                this.updateVinylAnimation();
-                this.updatePlayIcon();
                 
-                this.playerBuffering.classList.remove('hidden');
-                this.playerStatus.textContent = 'Building Deep Buffer...';
+                // 30 Seconds Buffer to survive screen-off connection drops
+                let countdown = this.bufferTargetSeconds; 
                 
-                this.bufferTimeout = setTimeout(() => {
-                    if (this.currentStation) {
+                const overlay = document.getElementById('buffer-overlay');
+                const countText = document.getElementById('buffer-count');
+                
+                overlay.classList.remove('hidden');
+                countText.textContent = countdown;
+                this.updatePlayerStateUI();
+
+                this.bufferInterval = setInterval(() => {
+                    countdown--;
+                    countText.textContent = countdown;
+                    
+                    if (countdown <= 0) {
+                        clearInterval(this.bufferInterval);
                         this.executePlay();
                     }
-                }, this.bufferTargetSeconds);
+                }, 1000);
             }
 
             executePlay() {
                 this.isBuffering = false;
-                this.playerBuffering.classList.add('hidden');
-                this.playerStatus.textContent = 'Playing';
+                document.getElementById('buffer-overlay').classList.add('hidden');
                 
-                const playPromise = this.audio.play();
-                
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        this.isPlaying = true;
-                        this.updateVinylAnimation();
-                        this.updatePlayIcon();
-                    }).catch(err => {
-                        console.warn("Autoplay prevented or network issue:", err);
-                        this.isPlaying = false;
-                        this.playerStatus.textContent = 'Tap Play to Start';
-                        this.updateVinylAnimation();
-                        this.updatePlayIcon();
-                    });
-                }
+                this.audio.play().then(() => {
+                    this.isPlaying = true;
+                    this.updatePlayerStateUI();
+                }).catch(err => {
+                    console.warn("Autoplay prevented or network error:", err);
+                    this.isPlaying = false;
+                    document.getElementById('player-now-playing').textContent = 'Playback Error - Tap Play';
+                    this.updatePlayerStateUI();
+                });
             }
 
             togglePlay() {
@@ -426,25 +529,30 @@
                     return;
                 }
 
-                if (this.isPlaying) {
-                    this.isPlaying = false;
-                    this.audio.pause();
-                    this.playerStatus.textContent = 'Paused';
-                } else {
-                    // If resuming, just play immediately without deep buffer wait
-                    this.isPlaying = true;
-                    this.playerStatus.textContent = 'Playing';
-                    this.audio.play().catch(e => {
-                        this.isPlaying = false;
-                        this.playerStatus.textContent = 'Playback Error';
-                    });
+                if (this.isBuffering) {
+                    // Cancel buffering
+                    clearInterval(this.bufferInterval);
+                    this.isBuffering = false;
+                    document.getElementById('buffer-overlay').classList.add('hidden');
+                    this.updatePlayerStateUI();
+                    return;
                 }
-                
-                this.updateVinylAnimation();
-                this.updatePlayIcon();
+
+                if (this.isPlaying) {
+                    this.audio.pause();
+                    this.isPlaying = false;
+                } else {
+                    // If manually resuming, we can bypass the 30s forced buffer 
+                    // (assume user wants immediate sound, or start buffer again?)
+                    // Let's just play normally here to maintain responsive feel.
+                    this.audio.play().catch(e => console.error(e));
+                    this.isPlaying = true;
+                }
+                this.updatePlayerStateUI();
             }
 
-            updateVinylAnimation() {
+            updatePlayerStateUI() {
+                // Vinyl Spin Animation
                 if (this.isPlaying) {
                     this.playerStage.classList.remove('is-paused');
                     this.playerStage.classList.add('is-playing');
@@ -452,53 +560,42 @@
                     this.playerStage.classList.remove('is-playing');
                     this.playerStage.classList.add('is-paused');
                 }
-            }
 
-            updatePlayIcon() {
+                // Play Button Icon
                 if (this.isBuffering) {
-                    this.iconPlay.className = "fa-solid fa-hourglass-half text-2xl sm:text-3xl ml-0";
+                    this.iconPlay.className = "fa-solid fa-xmark text-4xl ml-0 text-white/80"; // Cancel button during buffer
                 } else if (this.isPlaying) {
-                    this.iconPlay.className = "fa-solid fa-pause text-3xl sm:text-4xl ml-0";
+                    this.iconPlay.className = "fa-solid fa-pause text-4xl ml-0";
                 } else {
-                    this.iconPlay.className = "fa-solid fa-play text-3xl sm:text-4xl ml-2";
+                    this.iconPlay.className = "fa-solid fa-play text-4xl ml-2";
                 }
             }
 
             setupAudioListeners() {
                 this.audio.addEventListener('error', () => {
-                    this.playerStatus.textContent = 'Stream Offline / Error';
                     this.isPlaying = false;
                     this.isBuffering = false;
-                    this.playerBuffering.classList.add('hidden');
-                    this.updateVinylAnimation();
-                    this.updatePlayIcon();
+                    document.getElementById('buffer-overlay').classList.add('hidden');
+                    document.getElementById('player-now-playing').textContent = 'Stream Offline';
+                    this.updatePlayerStateUI();
                 });
                 
-                this.audio.addEventListener('waiting', () => {
-                    // Re-buffer if stream starves
-                    if (this.isPlaying) {
-                        this.playerStatus.textContent = 'Re-buffering...';
-                        this.playerBuffering.classList.remove('hidden');
-                        this.playerStage.classList.replace('is-playing', 'is-paused');
-                    }
-                });
-
                 this.audio.addEventListener('playing', () => {
-                    this.playerBuffering.classList.add('hidden');
-                    this.playerStatus.textContent = 'Playing';
                     this.isPlaying = true;
-                    this.updateVinylAnimation();
-                    this.updatePlayIcon();
+                    this.isBuffering = false;
+                    document.getElementById('buffer-overlay').classList.add('hidden');
+                    this.updatePlayerStateUI();
                 });
             }
 
             setupMediaSession() {
                 if ('mediaSession' in navigator && this.currentStation) {
+                    const thumb = this.getArtwork(this.currentStation);
                     navigator.mediaSession.metadata = new MediaMetadata({
                         title: this.currentStation.name,
                         artist: 'RelayBox FM',
                         album: 'Live Radio',
-                        artwork: [ { src: this.currentStation.thumb, sizes: '300x300', type: 'image/png' } ]
+                        artwork: [ { src: thumb, sizes: '512x512', type: 'image/png' } ]
                     });
 
                     navigator.mediaSession.setActionHandler('play', () => this.togglePlay());
@@ -508,7 +605,7 @@
             }
         }
 
-        // Boot
+        // Boot Application
         window.addEventListener('DOMContentLoaded', () => {
             setupPWA();
             window.app = new RelayBoxApp();
